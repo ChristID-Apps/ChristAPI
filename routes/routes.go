@@ -2,6 +2,7 @@ package routes
 
 import (
 	"christ-api/internal/auth"
+	"christ-api/internal/bible"
 	"christ-api/internal/contacts"
 	"christ-api/internal/middleware"
 	"christ-api/internal/role"
@@ -40,4 +41,11 @@ func Setup(app *fiber.App) {
 	protected.Get("/contacts", contacts.ListContacts)
 	protected.Post("/contacts", contacts.CreateContact)
 	protected.Patch("/contacts/:id", contacts.UpdateContact)
+
+	// bible
+	protected.Get("/books", bible.ListSurat)
+	protected.Get("/books/:id/chapters", bible.ListPasal)
+	protected.Get("/books/:book_id/chapters/:id", bible.GetPasalDetail)
+	protected.Get("/chapters/:id/verses", bible.ListAyat)
+	protected.Get("/verses/:id", bible.GetAyat)
 }
