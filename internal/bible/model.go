@@ -1,11 +1,11 @@
 package bible
 
 type Surat struct {
-	ID        int64         `json:"id"`
-	NamaSurat string        `json:"nama_surat"`
-	Singkatan string        `json:"singkatan"`
-	Urutan    int64 		`json:"urutan"`
-	Testament string        `json:"testament"`
+	ID        int64  `json:"id"`
+	NamaSurat string `json:"nama_surat"`
+	Singkatan string `json:"singkatan"`
+	Urutan    int64  `json:"urutan"`
+	Testament string `json:"testament"`
 }
 
 type Perikop struct {

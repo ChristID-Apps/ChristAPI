@@ -13,22 +13,22 @@ import (
 )
 
 func main() {
-    // load env dulu
-    if err := godotenv.Load(); err != nil {
-        log.Fatal("❌ .env tidak terbaca")
-    }
+	// load env dulu
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("❌ .env tidak terbaca")
+	}
 
-    // connect database
-    database.Connect()
+	// connect database
+	database.Connect()
 
-    // initialize services that need DB
-    auth.InitService(&auth.AuthRepository{DB: database.DB})
+	// initialize services that need DB
+	auth.InitService(&auth.AuthRepository{DB: database.DB})
 
-    app := fiber.New()
-    app.Use(middleware.CustomLogger)
+	app := fiber.New()
+	app.Use(middleware.CustomLogger)
 
-    routes.Setup(app)
+	routes.Setup(app)
 
-    log.Println("🚀 Server running on :3000")
-    app.Listen(":3000")
+	log.Println("🚀 Server running on :3000")
+	app.Listen(":3000")
 }

@@ -14,7 +14,7 @@ func ListSurat(c *fiber.Ctx) error {
 	if t != "" {
 		testament = &t
 	}
-	
+
 	out, err := service.ListSurat(testament)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})

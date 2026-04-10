@@ -40,9 +40,9 @@ func Login(c *fiber.Ctx) error {
 
 func Register(c *fiber.Ctx) error {
 	type Request struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		SiteID   *int64 `json:"site_id"`
+		Email     string `json:"email"`
+		Password  string `json:"password"`
+		SiteID    *int64 `json:"site_id"`
 		ContactID *int64 `json:"contact_id"`
 	}
 
