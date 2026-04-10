@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"christ-api/internal/contacts"
 	"christ-api/pkg/jwt"
 	"errors"
 
@@ -8,7 +9,7 @@ import (
 )
 
 type AuthService struct {
-	Repo AuthRepository
+	Repo *AuthRepository
 }
 
 func (s *AuthService) Login(email, password string, siteID *int64) (string, error) {
@@ -73,4 +74,33 @@ func (s *AuthService) Register(email, password string, siteID, contactID *int64)
 	}
 
 	return token, user, nil
+}
+
+// RegisterWithContact creates a contact and user in a single transaction and returns a token.
+func (s *AuthService) RegisterWithContact(fullName string, phone *string, address *string, contactSiteID *int64, email, password string, userSiteID *int64) (string, *User, *contacts.Contact, error) {
+	// check existing user
+	existing, err := s.Repo.FindByEmail(email)
+	if err != nil {
+		return "", nil, nil, err
+	}
+	if existing != nil {
+		return "", nil, nil, errors.New("user already exists")
+	}
+
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	c, u, err := s.Repo.CreateContactAndUser(fullName, phone, address, contactSiteID, email, string(hashed), userSiteID)
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	token, err := jwt.GenerateToken(int(u.ID))
+	if err != nil {
+		return "", nil, nil, err
+	}
+
+	return token, u, c, nil
 }
