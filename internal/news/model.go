@@ -10,6 +10,7 @@ type News struct {
 	Excerpt     *string    `json:"excerpt,omitempty"`
 	Content     string     `json:"content"`
 	AuthorID    *int64     `json:"author_id,omitempty"`
+	AuthorName  *string    `json:"author_name,omitempty"`
 	SiteID      *int64     `json:"site_id,omitempty"`
 	Status      string     `json:"status"`
 	IsFeatured  bool       `json:"is_featured"`

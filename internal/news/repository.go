@@ -13,7 +13,7 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 		return nil, sql.ErrConnDone
 	}
 
-	query := `SELECT id, uuid, title, slug, excerpt, content, author_id, site_id, status, is_featured, meta, published_at, views, created_at, updated_at, deleted_at FROM news WHERE deleted_at IS NULL`
+	query := `SELECT n.id, n.uuid, n.title, n.slug, n.excerpt, n.content, n.author_id, n.site_id, n.status, n.is_featured, n.meta, n.published_at, n.views, n.created_at, n.updated_at, n.deleted_at, c.full_name AS author_name FROM news n LEFT JOIN users u ON n.author_id = u.id LEFT JOIN contacts c ON u.contact_id = c.id WHERE n.deleted_at IS NULL`
 	args := []interface{}{}
 	idx := 1
 
@@ -57,8 +57,9 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 		var createdAt sql.NullTime
 		var updatedAt sql.NullTime
 		var deletedAt sql.NullTime
+		var authorName sql.NullString
 
-		err := rows.Scan(&n.ID, &n.UUID, &n.Title, &n.Slug, &excerpt, &n.Content, &authorID, &siteID, &n.Status, &n.IsFeatured, &meta, &publishedAt, &n.Views, &createdAt, &updatedAt, &deletedAt)
+		err := rows.Scan(&n.ID, &n.UUID, &n.Title, &n.Slug, &excerpt, &n.Content, &authorID, &siteID, &n.Status, &n.IsFeatured, &meta, &publishedAt, &n.Views, &createdAt, &updatedAt, &deletedAt, &authorName)
 		if err != nil {
 			return nil, err
 		}
@@ -87,6 +88,10 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 		}
 		if deletedAt.Valid {
 			n.DeletedAt = &deletedAt.Time
+		}
+		if authorName.Valid {
+			an := authorName.String
+			n.AuthorName = &an
 		}
 		out = append(out, n)
 	}
@@ -171,6 +176,17 @@ func (r *NewsRepository) Create(n *News) (*News, error) {
 	}
 	if deletedAt.Valid {
 		created.DeletedAt = &deletedAt.Time
+	}
+
+	if created.AuthorID != nil {
+		var authorName sql.NullString
+		row := database.DB.QueryRow(`SELECT c.full_name FROM users u LEFT JOIN contacts c ON u.contact_id = c.id WHERE u.id = $1 LIMIT 1`, *created.AuthorID)
+		if err := row.Scan(&authorName); err == nil {
+			if authorName.Valid {
+				an := authorName.String
+				created.AuthorName = &an
+			}
+		}
 	}
 	return &created, nil
 }
