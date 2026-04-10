@@ -68,12 +68,18 @@ func GetAyat(c *fiber.Ctx) error {
 
 // GetPasalDetail returns a pasal with its perikops and ayats grouped
 func GetPasalDetail(c *fiber.Ctx) error {
-	idStr := c.Params("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	// parse book id and chapter number
+	bookIDStr := c.Params("book_id")
+	bookID, err := strconv.ParseInt(bookIDStr, 10, 64)
+	if err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "invalid book_id"})
+	}
+	nomorStr := c.Params("id")
+	nomor, err := strconv.ParseInt(nomorStr, 10, 64)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
 	}
-	out, err := service.GetPasalWithContents(id)
+	out, err := service.GetPasalWithContentsBySuratNomor(bookID, nomor)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

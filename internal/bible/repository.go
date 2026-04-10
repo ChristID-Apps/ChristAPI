@@ -11,13 +11,18 @@ func (r *BibleRepository) ListSurat(testament *string) ([]Surat, error) {
 	if database.DB == nil {
 		return nil, sql.ErrConnDone
 	}
-	var rows *sql.Rows
-	var err error
-	if testament == nil {
-		rows, err = database.DB.Query(`SELECT id, nama_surat, singkatan, urutan, testament FROM surat ORDER BY urutan`)
-	} else {
-		rows, err = database.DB.Query(`SELECT id, nama_surat, singkatan, urutan, testament FROM surat WHERE testament=$1 ORDER BY urutan`, *testament)
+
+	query := `SELECT id, nama_surat, singkatan, urutan, testament FROM surat`
+
+	args := []interface{}{}
+	if testament != nil {
+		query += ` WHERE testament=$1`
+		args = append(args, *testament)
 	}
+	
+	query += ` ORDER BY urutan`
+
+	rows, err := database.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -191,4 +196,22 @@ func (r *BibleRepository) GetPasalWithContents(pasalID int64) (*PasalDetail, err
 		AyatsWithoutPerikop: ayatsNoPerikop,
 	}
 	return &out, nil
+}
+
+// GetPasalBySuratNomor returns a Pasal by surat_id and nomor_pasal
+func (r *BibleRepository) GetPasalBySuratNomor(suratID int64, nomorPasal int64) (Pasal, error) {
+	if database.DB == nil {
+		return Pasal{}, sql.ErrConnDone
+	}
+	var p Pasal
+	var judul sql.NullString
+	row := database.DB.QueryRow(`SELECT id, surat_id, nomor_pasal, judul FROM pasal WHERE surat_id=$1 AND nomor_pasal=$2 LIMIT 1`, suratID, nomorPasal)
+	if err := row.Scan(&p.ID, &p.SuratID, &p.NomorPasal, &judul); err != nil {
+		return Pasal{}, err
+	}
+	if judul.Valid {
+		v := judul.String
+		p.Judul = &v
+	}
+	return p, nil
 }

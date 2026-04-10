@@ -1,12 +1,10 @@
 package bible
 
-import "database/sql"
-
 type Surat struct {
 	ID        int64         `json:"id"`
 	NamaSurat string        `json:"nama_surat"`
 	Singkatan string        `json:"singkatan"`
-	Urutan    sql.NullInt64 `json:"urutan"`
+	Urutan    int64 		`json:"urutan"`
 	Testament string        `json:"testament"`
 }
 
