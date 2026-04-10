@@ -13,13 +13,12 @@ func (r *BibleRepository) ListSurat(testament *string) ([]Surat, error) {
 	}
 
 	query := `SELECT id, nama_surat, singkatan, urutan, testament FROM surat`
-
+	
 	args := []interface{}{}
 	if testament != nil {
 		query += ` WHERE testament=$1`
 		args = append(args, *testament)
 	}
-	
 	query += ` ORDER BY urutan`
 
 	rows, err := database.DB.Query(query, args...)

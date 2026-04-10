@@ -1,15 +1,15 @@
 package main
 
 import (
-    "log"
+	"log"
 
-    "christ-api/pkg/database"
-    "christ-api/internal/auth"
-    "christ-api/routes"
-    "christ-api/internal/middleware"
+	"christ-api/internal/auth"
+	"christ-api/internal/middleware"
+	"christ-api/pkg/database"
+	"christ-api/routes"
 
-    "github.com/gofiber/fiber/v2"
-    "github.com/joho/godotenv"
+	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 )
 
 func main() {

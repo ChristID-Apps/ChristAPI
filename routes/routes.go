@@ -5,6 +5,7 @@ import (
 	"christ-api/internal/bible"
 	"christ-api/internal/contacts"
 	"christ-api/internal/middleware"
+	"christ-api/internal/news"
 	"christ-api/internal/role"
 	"christ-api/internal/sites"
 
@@ -41,6 +42,12 @@ func Setup(app *fiber.App) {
 	protected.Get("/contacts", contacts.ListContacts)
 	protected.Post("/contacts", contacts.CreateContact)
 	protected.Patch("/contacts/:id", contacts.UpdateContact)
+
+	// news
+	protected.Get("/news", news.ListNews)
+	protected.Post("/news", news.CreateNews)
+	protected.Patch("/news/:uuid", news.UpdateNews)
+	protected.Delete("/news/:uuid", news.DeleteNews)
 
 	// bible
 	protected.Get("/books", bible.ListSurat)
