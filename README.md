@@ -262,3 +262,5 @@ psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/0001_create_news.sql
 
 Butuh bantuan lebih lanjut? sebutkan fitur yang mau ditambah atau testing yang ingin dibuat — saya bantu contoh kode dan test case singkat.
 
+Checklists: lihat [CHECKLIST.md](CHECKLIST.md) untuk panduan pre-commit, CI, migration, dan release.
+
