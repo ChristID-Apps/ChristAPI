@@ -2,6 +2,8 @@ package auth
 
 import (
 	"database/sql"
+
+	"christ-api/internal/contacts"
 )
 
 type AuthRepository struct {
@@ -110,4 +112,100 @@ func (r *AuthRepository) UpdateLastLoginAndSite(userID int64, siteID *int64) err
 	query := `UPDATE users SET last_login_at = NOW(), site_id = COALESCE($2, site_id) WHERE id = $1`
 	_, err := r.DB.Exec(query, userID, siteID)
 	return err
+}
+
+// CreateContactAndUser creates a contact and a user within a single DB transaction.
+func (r *AuthRepository) CreateContactAndUser(fullName string, phone *string, address *string, contactSiteID *int64, email, passwordHash string, userSiteID *int64) (*contacts.Contact, *User, error) {
+	if r == nil || r.DB == nil {
+		return nil, nil, sql.ErrConnDone
+	}
+
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// rollback helper
+	rollback := func() {
+		_ = tx.Rollback()
+	}
+
+	// insert contact
+	var c contacts.Contact
+	contactQuery := `INSERT INTO contacts (full_name, phone, address, created_at, updated_at, site_id) VALUES ($1,$2,$3,NOW(),NOW(),$4) RETURNING id, full_name, phone, address, created_at, updated_at, site_id`
+	var phoneN sql.NullString
+	var addrN sql.NullString
+	var createdN sql.NullTime
+	var updatedN sql.NullTime
+	var siteIDN sql.NullInt64
+
+	row := tx.QueryRow(contactQuery, fullName, phone, address, contactSiteID)
+	if err := row.Scan(&c.ID, &c.FullName, &phoneN, &addrN, &createdN, &updatedN, &siteIDN); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+	if phoneN.Valid {
+		v := phoneN.String
+		c.Phone = &v
+	}
+	if addrN.Valid {
+		v := addrN.String
+		c.Address = &v
+	}
+	if createdN.Valid {
+		c.CreatedAt = &createdN.Time
+	}
+	if updatedN.Valid {
+		c.UpdatedAt = &updatedN.Time
+	}
+	if siteIDN.Valid {
+		v := siteIDN.Int64
+		c.SiteID = &v
+	}
+
+	// insert user with contact_id
+	var user User
+	userQuery := `INSERT INTO users (email, password_hash, site_id, contact_id, is_active, created_at, updated_at) VALUES ($1,$2,$3,$4,TRUE,NOW(),NOW()) RETURNING id, uuid, email, password_hash, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id`
+
+	var roleIDN sql.NullInt64
+	var contactIDN sql.NullInt64
+	var siteIDUN sql.NullInt64
+	var lastLoginN sql.NullTime
+	var createdUN sql.NullTime
+	var updatedUN sql.NullTime
+
+	row = tx.QueryRow(userQuery, email, passwordHash, userSiteID, c.ID)
+	if err := row.Scan(&user.ID, &user.UUID, &user.Email, &user.Password, &roleIDN, &contactIDN, &user.IsActive, &lastLoginN, &createdUN, &updatedUN, &siteIDUN); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+
+	if roleIDN.Valid {
+		v := roleIDN.Int64
+		user.RoleID = &v
+	}
+	if contactIDN.Valid {
+		v := contactIDN.Int64
+		user.ContactID = &v
+	}
+	if siteIDUN.Valid {
+		v := siteIDUN.Int64
+		user.SiteID = &v
+	}
+	if lastLoginN.Valid {
+		user.LastLoginAt = &lastLoginN.Time
+	}
+	if createdUN.Valid {
+		user.CreatedAt = &createdUN.Time
+	}
+	if updatedUN.Valid {
+		user.UpdatedAt = &updatedUN.Time
+	}
+
+	if err := tx.Commit(); err != nil {
+		rollback()
+		return nil, nil, err
+	}
+
+	return &c, &user, nil
 }
