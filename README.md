@@ -264,3 +264,22 @@ Butuh bantuan lebih lanjut? sebutkan fitur yang mau ditambah atau testing yang i
 
 Checklists: lihat [CHECKLIST.md](CHECKLIST.md) untuk panduan pre-commit, CI, migration, dan release.
 
+---
+
+**Enable Git pre-commit hooks (recommended)**
+
+We added a simple pre-commit hook to ensure Go files are formatted before committing. To enable it for your local clone:
+
+```bash
+# run once per clone
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
+What it does:
+- Runs `gofmt -l .` and blocks the commit if any files are unformatted.
+- If the hook blocks your commit, run `gofmt -w .`, `git add` the changes, then commit again.
+
+You can remove or disable the hook by resetting `core.hooksPath`.
+
+

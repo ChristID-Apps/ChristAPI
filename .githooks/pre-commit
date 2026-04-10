@@ -1,0 +1,15 @@
+#!/bin/sh
+# Pre-commit hook: ensure Go files are formatted with gofmt
+# To enable: git config core.hooksPath .githooks
+
+set -e
+
+OUT=$(gofmt -l .)
+if [ -n "$OUT" ]; then
+  echo "ERROR: gofmt found unformatted files:" 
+  echo "$OUT"
+  echo "Run: gofmt -w .  (then git add the changes)"
+  exit 1
+fi
+
+exit 0
