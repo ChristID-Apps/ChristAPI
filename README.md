@@ -1,292 +1,264 @@
-# Christ API 🚀
+# Christ API
 
-Sebuah REST API backend yang dibangun dengan **Go** dan **Fiber Framework** untuk mengelola data dengan sistem autentikasi JWT.
+REST API backend sederhana dibangun dengan Go + Fiber. Fokus: cepat dikembangkan, mudah dibaca, dan siap dikembangkan lebih lanjut.
 
----
-
-## Untuk Pemula 👶
-
-Jika ini pertama kalimu, jangan khawatir! Repository ini dirancang agar mudah dipahami.
+Ringkas dan langsung ke poin: berikut cara setup, cara ngoding, dan testing.
 
 ---
 
-## Requirements
+## Quick start
 
-Sebelum memulai, pastikan sudah install:
+1. Copy repository
 
-- **Go** versi 1.25.0 atau lebih tinggi ([Download](https://golang.org/))
-- **PostgreSQL** ([Download](https://www.postgresql.org/))
-- **Git** ([Download](https://git-scm.com/))
-
----
-
-## Setup Cepat
-
-### 1. Clone Project
 ```bash
 git clone <repo-url>
 cd christ-api
 ```
 
-### 2. Setup Database
-```bash
-# Buat database PostgreSQL
-createdb christ_api
+2. Buat database PostgreSQL
 
-# Jalankan migration jika ada
-# psql christ_api < migrations/init.sql
+```bash
+createdb christ_api
 ```
 
-### 3. Setup Environment
-Buat file `.env` di root folder:
+3. Buat file `.env` di root (conto):
+
 ```env
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=your_username
-DB_PASSWORD=your_password
+DB_USER=postgres
+DB_PASSWORD=secret
 DB_NAME=christ_api
-JWT_SECRET=your_secret_key_here
+DB_SSLMODE=disable
+JWT_SECRET=changeme
 PORT=3000
 ```
 
-### 4. Download Dependencies
+4. Install deps dan run
+
 ```bash
 go mod download
-```
-
-### 5. Jalankan Project
-```bash
 go run cmd/server/main.go
 ```
 
-Server berjalan di: `http://localhost:3000`
+Server default: http://localhost:3000
+
+Untuk menjalankan migrations SQL yang ada: gunakan `psql` atau `golang-migrate` (rekomendasi untuk production).
 
 ---
 
-## Struktur Folder yang Mudah Dipahami
+## Struktur proyek (cepat)
 
-```
-christ-api/
-├── cmd/
-│   └── server/
-│       └── main.go          ← Entry point (dimulai dari sini)
-│
-├── internal/                 ← Core business logic
-│   ├── auth/                 ← Fitur login & autentikasi
-│   │   ├── handler.go        ← Menerima request HTTP
-│   │   ├── service.go        ← Logika bisnis
-│   │   ├── repository.go     ← Query database
-│   │   └── model.go          ← Struktur data
-│   │
-│   └── middleware/           ← Proses request sebelum sampai handler
-│       ├── auth.go           ← Cek JWT token
-│       └── logger.go         ← Catat setiap request
-│
-├── pkg/                      ← Utility & helper umum
-│   ├── database/             ← Koneksi database
-│   └── jwt/                  ← Token management
-│
-├── routes/
-│   └── routes.go            ← Daftar semua endpoint API
-│
-├── go.mod                   ← Daftar dependency
-└── .env                     ← Konfigurasi (jangan commit ke git!)
-```
+- `cmd/server/main.go` — entry point
+- `routes/` — daftar endpoint
+- `internal/` — fitur (feature-based): setiap fitur biasanya punya `handler.go`, `service.go`, `repository.go`, `model.go`
+- `pkg/database` — koneksi DB
+- `migrations/` — SQL migration
 
-### 📚 Penjelasan Singkat
+Konvensi penting:
+- Handler = thin (HTTP parsing + response)
+- Service = business logic
+- Repository = semua query database (parameterized queries)
 
-- **cmd/**: Tempat program dimulai (entry point)
-- **internal/**: Folder yang paling penting - tempat logika aplikasi
-- **pkg/**: Helper & utility yang bisa dipakai di mana saja
-- **routes/**: Daftar semua endpoint (path API)
+Catatan: beberapa modul saat ini menggunakan `database.DB` global; idealnya gunakan dependency injection (constructor) untuk testability.
 
 ---
 
-## API Endpoint
+## Environment
 
-### 1. Login (Tidak perlu token)
+Pastikan environment variables di `.env` sudah diatur. Kunci yang biasa dipakai:
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`
+- `JWT_SECRET` — rahasiakan
+- `PORT` — server port
+
+---
+
+## Cara ngoding (singkat & praktis)
+
+1. Buat fitur baru di `internal/<feature>` dengan empat file:
+   - `handler.go` — hanya parsing request dan return response
+   - `service.go` — logika utama, tanpa DB query langsung
+   - `repository.go` — query ke DB (gunakan parameterized query)
+   - `model.go` — struct data
+
+2. Daftarkan route di `routes/routes.go`.
+3. Unit test untuk `service` (mock repository) dan integration test untuk handler (httptest atau Postman).
+
+Prinsip singkat: keep handlers thin, push logic ke service, query hanya di repository.
+
+Contoh commit message singkat dan jelas:
+```
+feat(news): add list and create endpoints
+fix(auth): handle nil DB connection
+```
+
+---
+
+## Step-by-step: Tambah endpoint baru
+
+Berikut langkah praktis untuk menambah fitur/endpoint baru. Contoh menggunakan feature `news`.
+
+1) Buat folder feature
+
 ```bash
-POST /api/login
-Content-Type: application/json
+mkdir -p internal/news
+```
 
-{
-  "username": "john",
-  "password": "password123"
+2) `model.go` — definisikan struct data
+
+```go
+package news
+
+import "time"
+
+type News struct {
+  ID int64 `json:"id"`
+  UUID string `json:"uuid"`
+  Title string `json:"title"`
+  Content string `json:"content"`
+  SiteID *int64 `json:"site_id,omitempty"`
+  CreatedAt time.Time `json:"created_at"`
+  UpdatedAt time.Time `json:"updated_at"`
 }
 ```
 
-**Response:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs..."
+3) `repository.go` — semua query DB, satu interface + satu impl
+
+```go
+package news
+
+import (
+  "context"
+  "database/sql"
+)
+
+type Repository interface {
+  FindByID(ctx context.Context, id int64) (*News, error)
+  List(ctx context.Context, siteID *int64, limit, offset int) ([]News, error)
+  Create(ctx context.Context, n *News) (*News, error)
 }
+
+type repo struct { db *sql.DB }
+func NewRepository(db *sql.DB) Repository { return &repo{db: db} }
+
+// implement FindByID, List, Create — gunakan QueryRowContext/QueryContext
 ```
 
-### 2. Profile (Perlu token)
-```bash
-GET /api/profile
-Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+4) `service.go` — business logic, bergantung pada interface repo
+
+```go
+package news
+
+import "context"
+
+type Service interface {
+  Get(ctx context.Context, id int64) (*News, error)
+  Create(ctx context.Context, n *News) (*News, error)
+}
+
+type service struct { repo Repository }
+func NewService(r Repository) Service { return &service{repo: r} }
+
+func (s *service) Get(ctx context.Context, id int64) (*News, error) {
+  if id <= 0 { return nil, ErrInvalidID }
+  return s.repo.FindByID(ctx, id)
+}
+
+// Create: validasi ringkas lalu repo.Create
 ```
 
-**Response:**
-```json
-{
-  "message": "you are logged in"
+5) `handler.go` — HTTP layer, tipis, register route
+
+```go
+package news
+
+import "github.com/gofiber/fiber/v2"
+
+type Handler struct{ svc Service }
+func NewHandler(s Service) *Handler { return &Handler{svc: s} }
+
+func (h *Handler) RegisterRoutes(app *fiber.App) {
+  g := app.Group("/api")
+  g.Get("/news", h.list)
+  g.Post("/news", h.create)
 }
+
+// h.list/h.create: parse request, call service, return JSON/status
 ```
+
+6) Wiring di `main.go` atau `routes.Setup`
+
+```go
+db := database.DB // atau NewPostgresConnection()
+repo := news.NewRepository(db)
+svc := news.NewService(repo)
+handler := news.NewHandler(svc)
+handler.RegisterRoutes(app)
+```
+
+7) Testing cepat
+
+- Unit test service: mock `Repository` (interface) dan tes logika.
+- Repo tests: gunakan `github.com/DATA-DOG/go-sqlmock` untuk assert query.
+- Handler tests: gunakan Fiber's app + `httptest` untuk request/response.
+
+Tips singkat:
+- Jangan letakkan business logic di handler.
+- Repository harus mengembalikan errors, bukan panic.
+- Selalu gunakan parameterized query dan context.
 
 ---
 
-## Cara Kerja Sederhana
+## Testing
 
-### 1. User Kirim Request
+- Run unit tests:
 ```
-Request HTTP → /api/login
-```
-
-### 2. Handler Terima
-```go
-// handler.go menerima request
-func Login(c *fiber.Ctx) error {
-    // Ambil data dari request
-    // Panggil service
-}
+go test ./...
 ```
 
-### 3. Service Proses Logika
-```go
-// service.go proses data
-func (s *Service) Login(username, password string) {
-    // Validasi
-    // Generate token
-}
+- Rekomendasi:
+  - Untuk repository tests: gunakan `github.com/DATA-DOG/go-sqlmock` agar tidak perlu DB nyata.
+  - Untuk handler tests: gunakan `net/http/httptest` atau jalankan server lokal dan pakai Postman.
+
+Contoh cepat curl:
 ```
-
-### 4. Repository Query Database
-```go
-// repository.go ambil data dari DB
-func (r *Repository) GetUser(username string) {
-    // SELECT * FROM users
-}
-```
-
-### 5. Kembali Response
-```
-← JSON response ← Service ← Repository
-```
-
----
-
-## JWT Authentication
-
-### Apa itu JWT?
-- Token yang berisi informasi user
-- Dikirim di setiap request yang butuh login
-- Server memverifikasi token
-
-### Cara Pakai:
-1. Login dulu, dapat token
-2. Simpan token di client
-3. Kirim token di header: `Authorization: Bearer <token>`
-4. Server verifikasi token, baru akses resource
-
----
-
-## Development Tips untuk Junior 🎯
-
-### 1. Baca File Secara Berurutan
-- `cmd/server/main.go` (mulai dari sini)
-- `routes/routes.go` (lihat endpoint)
-- `internal/auth/handler.go` (lihat request/response)
-- `internal/auth/service.go` (lihat logika)
-- `internal/auth/repository.go` (lihat query DB)
-
-### 2. Testing Endpoint
-Gunakan **Postman** atau **curl**:
-```bash
 # Login
 curl -X POST http://localhost:3000/api/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"john","password":"pass123"}'
+  -d '{"email":"a@b.com","password":"pass"}'
 
-# Akses protected route (pakai token dari login)
-curl -X GET http://localhost:3000/api/profile \
-  -H "Authorization: Bearer TOKEN_DARI_LOGIN"
+# List news
+curl http://localhost:3000/api/news
 ```
 
-### 3. Baca Error dengan Teliti
-- Error message biasanya bilang apa yang salah
-- Cek log di terminal saat run `go run cmd/server/main.go`
-
-### 4. Jangan Takut untuk Debug
-- Print nilai di console: `fmt.Println(data)`
-- Atau gunakan debugger Go
-
 ---
 
-## Common Issues & Solusi
+## Migrations
 
-| Masalah | Solusi |
-|---------|--------|
-| Error: `cannot find package` | Jalankan `go mod download` |
-| Database connection error | Cek `.env` sudah benar dan PostgreSQL running |
-| JWT token invalid | Pastikan `JWT_SECRET` di `.env` sama di semua tempat |
-| Port 3000 sudah dipakai | Ubah `PORT` di `.env` atau stop app lain |
-
----
-
-## Menambah Fitur Baru
-
-Misalnya ingin tambah fitur **User Management**:
-
-### 1. Buat folder baru
-```bash
-mkdir -p internal/user
+- Folder `migrations/` berisi SQL siap pakai. Untuk development cukup jalankan:
 ```
-
-### 2. Buat 4 file (handler, service, repository, model)
-```bash
-touch internal/user/{handler,service,repository,model}.go
+psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/0001_create_news.sql
 ```
-
-### 3. Ikuti pattern yang ada di `internal/auth/`
-
-### 4. Daftarkan route di `routes/routes.go`
+- Untuk production gunakan tool migration (contoh: `golang-migrate`).
 
 ---
 
-## Resources untuk Belajar
+## Lint & format
 
-- [Fiber Documentation](https://docs.gofiber.io/) - Framework yang dipakai
-- [Go Tutorial](https://golang.org/doc/) - Bahasa yang dipakai
-- [JWT Explained](https://jwt.io/introduction) - Autentikasi yang dipakai
-- [PostgreSQL Basics](https://www.postgresql.org/docs/) - Database yang dipakai
-
----
-
-## Sebelum Push ke Git
-
-✅ Checklist:
-
-- [ ] `.env` sudah di `.gitignore` (jangan push!)
-- [ ] Semua code sudah tested
-- [ ] Tidak ada hardcoded password/secret
-- [ ] Error handling sudah ada
-- [ ] Database migration clear
+- Format: `gofmt -w .`
+- Vet: `go vet ./...`
+- (Opsional) Static analysis: `staticcheck ./...`
 
 ---
 
-## Bantuan & Pertanyaan?
+## Best practices singkat
 
-Kalau ada yang tidak paham:
-1. Baca komentar di code
-2. Baca file `go.mod` untuk tau dependency apa saja
-3. Tanya senior atau lihat documentation
-
----
-
-**Happy Coding! 🎉**
+- Hindari panic di repository; kembalikan error.
+- Gunakan parameterized queries untuk mencegah SQL injection.
+- Prefer dependency injection untuk repos/services (lebih mudah testing).
+- Simpan secrets di `.env` dan jangan commit.
 
 ---
 
-*Last Updated: 30 Maret 2026*
+Butuh bantuan lebih lanjut? sebutkan fitur yang mau ditambah atau testing yang ingin dibuat — saya bantu contoh kode dan test case singkat.
+
