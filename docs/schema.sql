@@ -74,7 +74,8 @@ CREATE TABLE public.contacts (
     address text,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    site_id bigint
+    site_id bigint,
+    deleted_at timestamp with time zone
 );
 
 
