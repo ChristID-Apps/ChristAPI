@@ -10,6 +10,8 @@
 Docker compose sudah memakai `.env.docker` yang ada di root project.
 Kalau perlu ubah credential atau port, edit file itu lalu jalankan `docker compose up -d`.
 
+Kalau `JWT_SECRET` kosong, aplikasi akan gagal start. Ini sengaja supaya tidak jalan dengan secret default yang lemah.
+
 ### 2. Build dan Run dengan Docker Compose
 ```bash
 docker-compose up -d

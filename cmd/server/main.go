@@ -21,6 +21,10 @@ func main() {
 		}
 	}
 
+	if os.Getenv("JWT_SECRET") == "" {
+		log.Fatal("❌ JWT_SECRET wajib diisi")
+	}
+
 	// connect database
 	database.Connect()
 
