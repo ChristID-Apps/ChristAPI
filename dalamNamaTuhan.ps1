@@ -1,7 +1,34 @@
 # Setup & run ChristAPI with Docker (PowerShell)
-# Usage: .\dalamNamaTuhan.ps1
+# Usage:
+#   .\dalamNamaTuhan.ps1
+#   .\dalamNamaTuhan.ps1 -NoBuild
+#   .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
+
+param(
+    [switch]$NoBuild,
+    [switch]$NoMigrate
+)
 
 $ErrorActionPreference = "Stop"
+
+function Invoke-DockerCompose {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $stdoutFile = [System.IO.Path]::GetTempFileName()
+    $stderrFile = [System.IO.Path]::GetTempFileName()
+
+    try {
+        $process = Start-Process -FilePath "docker" -ArgumentList (@("compose") + $Arguments) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+        if ($process.ExitCode -ne 0) {
+            throw "docker compose $($Arguments -join ' ') failed with exit code $($process.ExitCode)"
+        }
+    } finally {
+        Remove-Item $stdoutFile, $stderrFile -ErrorAction SilentlyContinue
+    }
+}
 
 Write-Host "[*] Bismillah... Starting ChristAPI setup..." -ForegroundColor Cyan
 Write-Host ""
@@ -33,15 +60,19 @@ if (-not (Test-Path ".env")) {
 Write-Host ""
 
 # 3. Build Docker image
-Write-Host "[*] Building Docker image..." -ForegroundColor Yellow
-& docker compose build --no-cache | Out-Null
-Write-Host "[OK] Build complete" -ForegroundColor Green
+if ($NoBuild) {
+    Write-Host "[*] Skipping image build (-NoBuild)" -ForegroundColor Yellow
+} else {
+    Write-Host "[*] Building Docker image..." -ForegroundColor Yellow
+    Invoke-DockerCompose -Arguments @("build", "--no-cache")
+    Write-Host "[OK] Build complete" -ForegroundColor Green
+}
 Write-Host ""
 
 # 4. Start services
 Write-Host "[*] Starting services (postgres, api)..." -ForegroundColor Yellow
-& docker compose down 2>&1 | Out-Null
-& docker compose up -d | Out-Null
+Invoke-DockerCompose -Arguments @("down")
+Invoke-DockerCompose -Arguments @("up", "-d")
 Write-Host "[OK] Services started" -ForegroundColor Green
 Write-Host ""
 
@@ -60,14 +91,18 @@ for ($attempt = 1; $attempt -le 15; $attempt++) {
 Write-Host ""
 
 # 6. Run migrations
-Write-Host "[*] Running database migrations..." -ForegroundColor Yellow
-& docker compose run --rm migrate -path=/migrations -database "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable" up | Out-Null
-Write-Host "[OK] Migrations complete" -ForegroundColor Green
+if ($NoMigrate) {
+    Write-Host "[*] Skipping migrations (-NoMigrate)" -ForegroundColor Yellow
+} else {
+    Write-Host "[*] Running database migrations..." -ForegroundColor Yellow
+    Invoke-DockerCompose -Arguments @("run", "--rm", "migrate", "-path=/migrations", "-database", "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable", "up")
+    Write-Host "[OK] Migrations complete" -ForegroundColor Green
+}
 Write-Host ""
 
 # 7. Show status
 Write-Host "[*] Service status:" -ForegroundColor Yellow
-& docker compose ps
+Invoke-DockerCompose -Arguments @("ps")
 Write-Host ""
 
 # 8. Show access info
