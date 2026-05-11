@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgre-chrisapi
+    labels:
+      project: "christ-api"
+      service: "database"
+    environment:
+      POSTGRES_USER: ${DB_USER:-christ_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-christ_password}
+      POSTGRES_DB: ${DB_NAME:-christ_db}
+    ports:
+      # Internal port pada container, external port di host
+      # Ganti 5433 jika sudah dipakai
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - christ_postgres_data:/var/lib/postgresql/data
+      - ./docs/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-christ_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - christ-network
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: golang-christapi
+    labels:
+      project: "christ-api"
+      service: "api"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-christ_user}
+      DB_PASSWORD: ${DB_PASSWORD:-christ_password}
+      DB_NAME: ${DB_NAME:-christ_db}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+    ports:
+      # Ganti 3001 jika port 3000 sudah dipakai
+      - "${API_PORT:-3001}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # Mount local .env into container working dir so godotenv.Load() finds it
+      - ./.env:/root/.env:ro
+    networks:
+      - christ-network
+    restart: unless-stopped
+
+  migrate:
+    image: migrate/migrate
+    container_name: migrate_christapi
+    volumes:
+      - ./migrations:/migrations
+    networks:
+      - christ-network
+    entrypoint: ["migrate"]
+    depends_on:
+      - postgres
+    restart: "no"
+
+volumes:
+  christ_postgres_data:
+
+networks:
+  christ-network:
+    driver: bridge
+    name: christ-network

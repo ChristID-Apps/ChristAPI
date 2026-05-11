@@ -1,0 +1,17 @@
+/.git
+/.github
+/.vscode
+/bin
+/vendor
+.env
+.env.local
+.DS_Store
+*.swp
+*.swo
+*~
+.idea
+.vscode
+*.iml
+k6/
+CHECKLIST.md
+README.md
