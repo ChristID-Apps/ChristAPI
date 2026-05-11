@@ -65,18 +65,13 @@ try {
 }
 Write-Host ""
 
-# 2. Check if .env exists, if not copy from .env.example
-Write-Host "[*] Checking environment variables..." -ForegroundColor Yellow
-if (-not (Test-Path ".env")) {
-    if (-not (Test-Path ".env.example")) {
-        Write-Host "[ERROR] .env.example not found" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "[*] .env not found, copying from .env.example..."
-    Copy-Item ".env.example" ".env"
-    Write-Host "[OK] .env created" -ForegroundColor Green
+# 2. Check if .env.docker exists
+Write-Host "[*] Checking Docker environment variables..." -ForegroundColor Yellow
+if (-not (Test-Path ".env.docker")) {
+    Write-Host "[ERROR] .env.docker not found" -ForegroundColor Red
+    exit 1
 } else {
-    Write-Host "[OK] .env already exists" -ForegroundColor Green
+    Write-Host "[OK] .env.docker already exists" -ForegroundColor Green
 }
 Write-Host ""
 
