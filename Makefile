@@ -1,4 +1,4 @@
-.PHONY: help docker-build docker-up docker-down docker-logs docker-restart
+.PHONY: help docker-build docker-up docker-down docker-logs docker-restart docker-migrate-up docker-migrate-down
 
 help:
 	@echo "Available commands:"
@@ -9,6 +9,8 @@ help:
 	@echo "  make docker-restart  - Restart services"
 	@echo "  make docker-shell    - Open shell in API container"
 	@echo "  make docker-db-shell - Open PostgreSQL shell"
+	@echo "  make docker-migrate-up   - Apply pending migrations"
+	@echo "  make docker-migrate-down - Roll back one migration"
 
 docker-build:
 	docker-compose build
@@ -32,10 +34,12 @@ docker-db-shell:
 	docker-compose exec postgres psql -U ${DB_USER:-christ_user} -d ${DB_NAME:-christ_db}
 
 docker-migrate-up:
-	docker compose run --rm migrate -path=/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgre-chrisapi:5432/$(DB_NAME)?sslmode=$(DB_SSLMODE)" up
+	docker compose up -d postgres
+	docker compose run --rm migrate -path=/migrations -database "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable" up
 
 docker-migrate-down:
-	docker compose run --rm migrate -path=/migrations -database "postgres://$(DB_USER):$(DB_PASSWORD)@postgre-chrisapi:5432/$(DB_NAME)?sslmode=$(DB_SSLMODE)" down
+	docker compose up -d postgres
+	docker compose run --rm migrate -path=/migrations -database "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable" down 1
 
 docker-clean:
 	docker-compose down -v

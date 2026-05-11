@@ -26,6 +26,12 @@ Kalau kamu cuma mau menjalankan container yang sudah ada, pakai mode run-only:
 powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
 ```
 
+Kalau kamu cuma mau apply migration baru ke database existing:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
+```
+
 **Apa yang terjadi otomatis:**
 - ✅ Build Docker image
 - ✅ Start PostgreSQL container
@@ -73,6 +79,9 @@ docker compose down
 
 # Mulai lagi
 docker compose up -d
+
+# Apply migration saja
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
 ```
 
 ---

@@ -10,6 +10,8 @@
 Docker compose sudah memakai `.env.docker` yang ada di root project.
 Kalau perlu ubah credential atau port, edit file itu lalu jalankan `docker compose up -d`.
 
+Kalau `JWT_SECRET` kosong, aplikasi akan gagal start. Ini sengaja supaya tidak jalan dengan secret default yang lemah.
+
 ### 2. Build dan Run dengan Docker Compose
 ```bash
 docker-compose up -d
@@ -58,6 +60,17 @@ docker-compose exec postgres psql -U christ_user -d christ_db
 #### Access API Container Shell
 ```bash
 docker-compose exec api sh
+```
+
+#### Apply Migration Only
+Kalau database existing cuma mau dinaikkan schema-nya tanpa build ulang:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
+```
+
+Atau pakai Makefile:
+```bash
+make docker-migrate-up
 ```
 
 ## Using Makefile (Optional)

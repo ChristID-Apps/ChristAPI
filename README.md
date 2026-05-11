@@ -51,6 +51,11 @@ Kalau container sudah pernah dibuat dan kamu cuma mau menjalankan lagi tanpa bui
 powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
 ```
 
+Kalau kamu cuma mau apply migration baru ke database existing:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
+```
+
 ### Atau baca [SETUP.md](./SETUP.md) untuk:
 - ✅ Penjelasan lengkap setiap step
 - ✅ Mode full setup dan mode run-only

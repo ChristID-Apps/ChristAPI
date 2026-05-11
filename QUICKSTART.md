@@ -12,6 +12,8 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1
 
 ✅ Done in ~15 seconds. API ready at http://localhost:3001
 
+Catatan keamanan: pastikan `.env` berisi `JWT_SECRET`. Aplikasi akan berhenti kalau secret ini belum diisi.
+
 ### Run-only mode
 
 Kalau image sudah ada dan kamu cuma mau hidupkan container lagi tanpa build ulang:
@@ -35,6 +37,14 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -Restart
 
 # Restart only API service by name
 powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -Restart -Service golang-christapi
+```
+
+### Migration only
+
+Kalau kamu cuma mau apply migration baru ke database existing:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
 ```
 
 ---

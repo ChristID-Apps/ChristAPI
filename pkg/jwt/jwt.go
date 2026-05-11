@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"errors"
 	"os"
 	"time"
 
@@ -13,8 +14,6 @@ func init() {
 	s := os.Getenv("JWT_SECRET")
 	if s != "" {
 		secret = []byte(s)
-	} else {
-		secret = []byte("secret-key")
 	}
 }
 
@@ -23,6 +22,10 @@ func Secret() []byte {
 }
 
 func GenerateToken(userID int) (string, error) {
+	if len(secret) == 0 {
+		return "", errors.New("JWT_SECRET is not configured")
+	}
+
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
