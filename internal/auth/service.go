@@ -12,42 +12,47 @@ type AuthService struct {
 	Repo *AuthRepository
 }
 
-func (s *AuthService) Login(email, password string, siteID *int64) (string, error) {
+func (s *AuthService) Login(email, password string, siteID *int64) (string, *LoginUserResponse, error) {
 	user, err := s.Repo.FindByEmail(email)
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	if user == nil {
-		return "", errors.New("user not found")
+		return "", nil, errors.New("user not found")
 	}
 
 	// compare hashed password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		return "", errors.New("wrong password")
+		return "", nil, errors.New("wrong password")
 	}
 
 	// update last login and optional site
 	if err := s.Repo.UpdateLastLoginAndSite(user.ID, nil); err != nil {
 		// non-fatal for login response, but return error if DB problem
-		return "", err
+		return "", nil, err
 	}
 
 	// if caller provided siteID, update it as well
 	if siteID != nil {
 		if err := s.Repo.UpdateLastLoginAndSite(user.ID, siteID); err != nil {
-			return "", err
+			return "", nil, err
 		}
 	}
 
 	token, err := jwt.GenerateToken(int(user.ID))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return token, nil
+	profile, err := s.Repo.GetLoginUserProfile(user.ID)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return token, profile, nil
 }
 
-func (s *AuthService) Register(email, password string, siteID, contactID *int64) (string, *User, error) {
+func (s *AuthService) Register(email, password string, roleID, siteID, contactID *int64) (string, *User, error) {
 	// check if user already exists
 	existing, err := s.Repo.FindByEmail(email)
 	if err != nil {
@@ -63,7 +68,7 @@ func (s *AuthService) Register(email, password string, siteID, contactID *int64)
 		return "", nil, err
 	}
 
-	user, err := s.Repo.CreateUser(email, string(hashed), siteID, contactID)
+	user, err := s.Repo.CreateUser(email, string(hashed), roleID, siteID, contactID)
 	if err != nil {
 		return "", nil, err
 	}
@@ -77,7 +82,7 @@ func (s *AuthService) Register(email, password string, siteID, contactID *int64)
 }
 
 // RegisterWithContact creates a contact and user in a single transaction and returns a token.
-func (s *AuthService) RegisterWithContact(fullName string, phone *string, address *string, contactSiteID *int64, email, password string, userSiteID *int64) (string, *User, *contacts.Contact, error) {
+func (s *AuthService) RegisterWithContact(fullName string, phone *string, address *string, contactSiteID *int64, email, password string, roleID, userSiteID *int64) (string, *User, *contacts.Contact, error) {
 	// check existing user
 	existing, err := s.Repo.FindByEmail(email)
 	if err != nil {
@@ -92,7 +97,7 @@ func (s *AuthService) RegisterWithContact(fullName string, phone *string, addres
 		return "", nil, nil, err
 	}
 
-	c, u, err := s.Repo.CreateContactAndUser(fullName, phone, address, contactSiteID, email, string(hashed), userSiteID)
+	c, u, err := s.Repo.CreateContactAndUser(fullName, phone, address, contactSiteID, email, string(hashed), roleID, userSiteID)
 	if err != nil {
 		return "", nil, nil, err
 	}
