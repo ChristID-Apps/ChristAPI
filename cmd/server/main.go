@@ -15,8 +15,10 @@ import (
 
 func main() {
 	// load env dulu
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("❌ .env tidak terbaca")
+	if err := godotenv.Load(".env.local"); err != nil {
+		if err := godotenv.Load(".env"); err != nil {
+			log.Println("ℹ️ .env.local/.env tidak ditemukan, pakai environment variables")
+		}
 	}
 
 	if os.Getenv("JWT_SECRET") == "" {
@@ -34,6 +36,13 @@ func main() {
 
 	routes.Setup(app)
 
-	log.Println("🚀 Server running on :3000")
-	app.Listen(":3000")
+	port := os.Getenv("API_PORT")
+	if port == "" {
+		port = "3000"
+	}
+
+	log.Println("🚀 Server running on :" + port)
+	if err := app.Listen(":" + port); err != nil {
+		log.Fatal("❌ Failed to start server:", err)
+	}
 }

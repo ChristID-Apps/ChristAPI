@@ -3,10 +3,14 @@
 #   .\dalamNamaTuhan.ps1
 #   .\dalamNamaTuhan.ps1 -NoBuild
 #   .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
+#   .\dalamNamaTuhan.ps1 -MigrateOnly
 
 param(
     [switch]$NoBuild,
-    [switch]$NoMigrate
+    [switch]$NoMigrate,
+    [switch]$Restart,
+    [switch]$MigrateOnly,
+    [string]$Service = ""  # optional: service name to restart (e.g. golang-christapi)
 )
 
 $ErrorActionPreference = "Stop"
@@ -30,6 +34,25 @@ function Invoke-DockerCompose {
     }
 }
 
+function Invoke-DockerRaw {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $stdoutFile = [System.IO.Path]::GetTempFileName()
+    $stderrFile = [System.IO.Path]::GetTempFileName()
+
+    try {
+        $process = Start-Process -FilePath "docker" -ArgumentList $Arguments -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+        if ($process.ExitCode -ne 0) {
+            throw "docker $($Arguments -join ' ') failed with exit code $($process.ExitCode)"
+        }
+    } finally {
+        Remove-Item $stdoutFile, $stderrFile -ErrorAction SilentlyContinue
+    }
+}
+
 Write-Host "[*] Bismillah... Starting ChristAPI setup..." -ForegroundColor Cyan
 Write-Host ""
 
@@ -44,24 +67,21 @@ try {
 }
 Write-Host ""
 
-# 2. Check if .env exists, if not copy from .env.example
-Write-Host "[*] Checking environment variables..." -ForegroundColor Yellow
-if (-not (Test-Path ".env")) {
-    if (-not (Test-Path ".env.example")) {
-        Write-Host "[ERROR] .env.example not found" -ForegroundColor Red
-        exit 1
-    }
-    Write-Host "[*] .env not found, copying from .env.example..."
-    Copy-Item ".env.example" ".env"
-    Write-Host "[OK] .env created" -ForegroundColor Green
+# 2. Check if .env.docker exists
+Write-Host "[*] Checking Docker environment variables..." -ForegroundColor Yellow
+if (-not (Test-Path ".env.docker")) {
+    Write-Host "[ERROR] .env.docker not found" -ForegroundColor Red
+    exit 1
 } else {
-    Write-Host "[OK] .env already exists" -ForegroundColor Green
+    Write-Host "[OK] .env.docker already exists" -ForegroundColor Green
 }
 Write-Host ""
 
 # 3. Build Docker image
-if ($NoBuild) {
-    Write-Host "[*] Skipping image build (-NoBuild)" -ForegroundColor Yellow
+if ($MigrateOnly) {
+	Write-Host "[*] Skipping image build (-MigrateOnly)" -ForegroundColor Yellow
+} elseif ($NoBuild -or $Restart) {
+    Write-Host "[*] Skipping image build (-NoBuild or -Restart)" -ForegroundColor Yellow
 } else {
     Write-Host "[*] Building Docker image..." -ForegroundColor Yellow
     Invoke-DockerCompose -Arguments @("build", "--no-cache")
@@ -69,12 +89,44 @@ if ($NoBuild) {
 }
 Write-Host ""
 
-# 4. Start services
-Write-Host "[*] Starting services (postgres, api)..." -ForegroundColor Yellow
-Invoke-DockerCompose -Arguments @("down")
-Invoke-DockerCompose -Arguments @("up", "-d")
-Write-Host "[OK] Services started" -ForegroundColor Green
-Write-Host ""
+# 4. Start or Restart services
+if ($MigrateOnly) {
+    Write-Host "[*] Starting PostgreSQL only for migration..." -ForegroundColor Yellow
+    Invoke-DockerCompose -Arguments @("up", "-d", "postgres")
+    Write-Host "[OK] PostgreSQL started" -ForegroundColor Green
+    Write-Host ""
+} elseif ($Restart) {
+    Write-Host "[*] Restart mode (-Restart)" -ForegroundColor Yellow
+    if ([string]::IsNullOrEmpty($Service)) {
+        Write-Host "[*] Restarting all services..." -ForegroundColor Yellow
+        Invoke-DockerCompose -Arguments @("restart")
+    } else {
+        Write-Host "[*] Restarting service: $Service" -ForegroundColor Yellow
+        try {
+            Invoke-DockerCompose -Arguments @("restart", $Service)
+        } catch {
+            Write-Host "[WARN] 'docker compose restart $Service' failed, trying 'docker restart $Service' (container-level)" -ForegroundColor Yellow
+            try {
+                Invoke-DockerRaw -Arguments @("restart", $Service)
+            } catch {
+                Write-Host "[ERROR] Failed to restart service/container: $Service" -ForegroundColor Red
+                throw
+            }
+        }
+    }
+
+    Write-Host "[OK] Services restarted" -ForegroundColor Green
+    Write-Host ""
+
+    # If we're in restart mode, skip build and migrations steps (fast-path)
+    Write-Host "[*] Skipping build/migrate in restart mode" -ForegroundColor Yellow
+} else {
+    Write-Host "[*] Starting services (postgres, api)..." -ForegroundColor Yellow
+    Invoke-DockerCompose -Arguments @("down")
+    Invoke-DockerCompose -Arguments @("up", "-d")
+    Write-Host "[OK] Services started" -ForegroundColor Green
+    Write-Host ""
+}
 
 # 5. Wait for postgres to be healthy (simplified approach)
 Write-Host "[*] Waiting for PostgreSQL to be healthy..." -ForegroundColor Yellow
@@ -91,7 +143,7 @@ for ($attempt = 1; $attempt -le 15; $attempt++) {
 Write-Host ""
 
 # 6. Run migrations
-if ($NoMigrate) {
+if ($NoMigrate -and -not $MigrateOnly) {
     Write-Host "[*] Skipping migrations (-NoMigrate)" -ForegroundColor Yellow
 } else {
     Write-Host "[*] Running database migrations..." -ForegroundColor Yellow
@@ -99,6 +151,12 @@ if ($NoMigrate) {
     Write-Host "[OK] Migrations complete" -ForegroundColor Green
 }
 Write-Host ""
+
+if ($MigrateOnly) {
+	Write-Host "[*] Migration-only mode selesai." -ForegroundColor Yellow
+	Write-Host "[SUCCESS] Migration applied successfully." -ForegroundColor Green
+	exit 0
+}
 
 # 7. Show status
 Write-Host "[*] Service status:" -ForegroundColor Yellow

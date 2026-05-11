@@ -1,8 +1,16 @@
 #!/bin/bash
 # Setup & run ChristAPI with Docker
 # Usage: ./dalamNamaTuhan.sh
+#        ./dalamNamaTuhan.sh --migrate-only
 
 set -e
+
+MIGRATE_ONLY=false
+for arg in "$@"; do
+    if [ "$arg" = "--migrate-only" ]; then
+        MIGRATE_ONLY=true
+    fi
+done
 
 echo "🙏 Bismillah... Starting ChristAPI setup..."
 echo ""
@@ -22,33 +30,40 @@ fi
 echo -e "${GREEN}✅ Docker is running${NC}"
 echo ""
 
-# 2. Check if .env exists, if not copy from .env.example
-echo "⚙️  Checking environment variables..."
-if [ ! -f .env ]; then
-    if [ ! -f .env.example ]; then
-        echo -e "${RED}❌ .env.example not found${NC}"
-        exit 1
-    fi
-    echo "📋 .env not found, copying from .env.example..."
-    cp .env.example .env
-    echo -e "${GREEN}✅ .env created${NC}"
+# 2. Check if .env.docker exists
+echo "⚙️  Checking Docker environment variables..."
+if [ ! -f .env.docker ]; then
+    echo -e "${RED}❌ .env.docker not found${NC}"
+    exit 1
 else
-    echo -e "${GREEN}✅ .env already exists${NC}"
+    echo -e "${GREEN}✅ .env.docker already exists${NC}"
 fi
 echo ""
 
 # 3. Build Docker image
-echo "🔨 Building Docker image..."
-docker compose build --no-cache
-echo -e "${GREEN}✅ Build complete${NC}"
-echo ""
+if [ "$MIGRATE_ONLY" = true ]; then
+    echo "🔨 Skipping Docker image build (migrate-only mode)"
+    echo ""
+else
+    echo "🔨 Building Docker image..."
+    docker compose build --no-cache
+    echo -e "${GREEN}✅ Build complete${NC}"
+    echo ""
+fi
 
 # 4. Start services
-echo "🚀 Starting services (postgres, api)..."
-docker compose down 2>/dev/null || true
-docker compose up -d
-echo -e "${GREEN}✅ Services started${NC}"
-echo ""
+if [ "$MIGRATE_ONLY" = true ]; then
+    echo "🚀 Starting PostgreSQL only..."
+    docker compose up -d postgres
+    echo -e "${GREEN}✅ PostgreSQL started${NC}"
+    echo ""
+else
+    echo "🚀 Starting services (postgres, api)..."
+    docker compose down 2>/dev/null || true
+    docker compose up -d
+    echo -e "${GREEN}✅ Services started${NC}"
+    echo ""
+fi
 
 # 5. Wait for postgres to be healthy
 echo "⏳ Waiting for PostgreSQL to be healthy..."
@@ -74,6 +89,11 @@ echo "🔄 Running database migrations..."
 docker compose run --rm migrate -path=/migrations -database "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable" up
 echo -e "${GREEN}✅ Migrations complete${NC}"
 echo ""
+
+if [ "$MIGRATE_ONLY" = true ]; then
+    echo -e "${GREEN}✅ Migration-only mode complete${NC}"
+    exit 0
+fi
 
 # 7. Show status
 echo "📊 Service status:"
