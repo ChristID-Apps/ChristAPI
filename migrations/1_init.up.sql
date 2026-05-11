@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS public.contacts (
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    site_id BIGINT
+    site_id BIGINT,
+    deleted_at TIMESTAMPTZ
 );
 
 -- sites
