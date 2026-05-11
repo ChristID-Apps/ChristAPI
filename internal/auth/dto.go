@@ -6,10 +6,11 @@ type LoginResponse struct {
 }
 
 type LoginUserResponse struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+	Points int64  `json:"points"`
 }
 
 type LoginDataResponse struct {

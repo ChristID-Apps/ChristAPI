@@ -311,6 +311,7 @@ CREATE TABLE public.users (
     password_hash text NOT NULL,
     role_id integer,
     contact_id bigint,
+    points_balance bigint DEFAULT 0 NOT NULL,
     is_active boolean DEFAULT true,
     last_login_at timestamp without time zone,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,

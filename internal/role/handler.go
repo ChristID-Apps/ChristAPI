@@ -3,6 +3,7 @@ package role
 import (
 	"strconv"
 
+	"christ-api/pkg/response"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -16,22 +17,22 @@ func ListRoles(c *fiber.Ctx) error {
 		if v, err := strconv.ParseInt(idStr, 10, 64); err == nil {
 			idPtr = &v
 		} else {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+			return response.Error(c, 422, "Invalid id", nil)
 		}
 	}
 	if siteStr := c.Query("siteId"); siteStr != "" {
 		if v, err := strconv.ParseInt(siteStr, 10, 64); err == nil {
 			sitePtr = &v
 		} else {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid site_id"})
+			return response.Error(c, 422, "Invalid site_id", nil)
 		}
 	}
 
 	roles, err := service.List(idPtr, sitePtr)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to list roles", nil)
 	}
-	return c.JSON(roles)
+	return response.Success(c, "Roles retrieved", roles)
 }
 
 func CreateRole(c *fiber.Ctx) error {
@@ -42,20 +43,20 @@ func CreateRole(c *fiber.Ctx) error {
 	}
 	r := new(Req)
 	if err := c.BodyParser(r); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 	rl, err := service.Create(r.Name, r.Description, r.SiteID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to create role", nil)
 	}
-	return c.Status(201).JSON(rl)
+	return response.Created(c, "Role created", rl)
 }
 
 func UpdateRole(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		return response.Error(c, 422, "Invalid id", nil)
 	}
 	type Req struct {
 		Name        string  `json:"name"`
@@ -63,11 +64,11 @@ func UpdateRole(c *fiber.Ctx) error {
 	}
 	r := new(Req)
 	if err := c.BodyParser(r); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 	rl, err := service.Update(id, r.Name, r.Description)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to update role", nil)
 	}
-	return c.JSON(rl)
+	return response.Success(c, "Role updated", rl)
 }

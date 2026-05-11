@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     password_hash TEXT NOT NULL,
     role_id INTEGER,
     contact_id BIGINT,
+    points_balance BIGINT DEFAULT 0 NOT NULL,
     is_active BOOLEAN DEFAULT true,
     last_login_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -68,8 +69,20 @@ CREATE TABLE IF NOT EXISTS public.news (
     deleted_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS public.user_points_ledger (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    change_amount BIGINT NOT NULL,
+    balance_after BIGINT NOT NULL,
+    reason TEXT NOT NULL,
+    reference_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
 -- indexes (example)
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users (email);
 CREATE INDEX IF NOT EXISTS idx_news_uuid ON public.news (uuid);
+CREATE INDEX IF NOT EXISTS idx_user_points_ledger_user_id ON public.user_points_ledger (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_points_ledger_created_at ON public.user_points_ledger (created_at DESC);
 
 -- Add any additional tables from docs/schema.sql as needed

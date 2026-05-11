@@ -6,6 +6,7 @@ import (
 	"christ-api/internal/contacts"
 	"christ-api/internal/middleware"
 	"christ-api/internal/news"
+	"christ-api/internal/points"
 	"christ-api/internal/role"
 	"christ-api/internal/sites"
 
@@ -44,6 +45,11 @@ func Setup(app *fiber.App) {
 	protected.Post("/contacts", contacts.CreateContact)
 	protected.Patch("/contacts/:id", contacts.UpdateContact)
 	protected.Delete("/contacts/:id", contacts.DeleteContact)
+
+	// points
+	protected.Get("/points", points.GetPoints)
+	protected.Post("/points/earn", points.EarnPoints)
+	protected.Post("/points/spend", points.SpendPoints)
 
 	// news
 	protected.Get("/news", news.ListNews)
