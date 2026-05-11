@@ -121,6 +121,8 @@ JWT_SECRET=your-secret-key-here-change-in-production
 - `DB_USER` & `DB_PASSWORD` dengan PostgreSQL setup kamu
 - `JWT_SECRET` dengan string random (production: gunakan secret manager)
 
+**Penting:** aplikasi akan berhenti saat startup kalau `JWT_SECRET` belum diisi. Jangan pakai fallback default.
+
 ### Step 3: Run Migrations
 
 **Option A: Gunakan golang-migrate CLI**
