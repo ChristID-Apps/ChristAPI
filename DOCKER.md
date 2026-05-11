@@ -60,6 +60,17 @@ docker-compose exec postgres psql -U christ_user -d christ_db
 docker-compose exec api sh
 ```
 
+#### Apply Migration Only
+Kalau database existing cuma mau dinaikkan schema-nya tanpa build ulang:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
+```
+
+Atau pakai Makefile:
+```bash
+make docker-migrate-up
+```
+
 ## Using Makefile (Optional)
 
 Kalau mau pakai `Makefile` di Windows, ada 2 hal yang harus ada:

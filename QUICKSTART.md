@@ -37,6 +37,14 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -Restart
 powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -Restart -Service golang-christapi
 ```
 
+### Migration only
+
+Kalau kamu cuma mau apply migration baru ke database existing:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
+```
+
 ---
 
 ## Setup Automation Scripts
