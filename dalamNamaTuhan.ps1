@@ -3,11 +3,13 @@
 #   .\dalamNamaTuhan.ps1
 #   .\dalamNamaTuhan.ps1 -NoBuild
 #   .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
+#   .\dalamNamaTuhan.ps1 -MigrateOnly
 
 param(
     [switch]$NoBuild,
     [switch]$NoMigrate,
     [switch]$Restart,
+    [switch]$MigrateOnly,
     [string]$Service = ""  # optional: service name to restart (e.g. golang-christapi)
 )
 
@@ -76,7 +78,9 @@ if (-not (Test-Path ".env.docker")) {
 Write-Host ""
 
 # 3. Build Docker image
-if ($NoBuild -or $Restart) {
+if ($MigrateOnly) {
+	Write-Host "[*] Skipping image build (-MigrateOnly)" -ForegroundColor Yellow
+} elseif ($NoBuild -or $Restart) {
     Write-Host "[*] Skipping image build (-NoBuild or -Restart)" -ForegroundColor Yellow
 } else {
     Write-Host "[*] Building Docker image..." -ForegroundColor Yellow
@@ -86,7 +90,12 @@ if ($NoBuild -or $Restart) {
 Write-Host ""
 
 # 4. Start or Restart services
-if ($Restart) {
+if ($MigrateOnly) {
+    Write-Host "[*] Starting PostgreSQL only for migration..." -ForegroundColor Yellow
+    Invoke-DockerCompose -Arguments @("up", "-d", "postgres")
+    Write-Host "[OK] PostgreSQL started" -ForegroundColor Green
+    Write-Host ""
+} elseif ($Restart) {
     Write-Host "[*] Restart mode (-Restart)" -ForegroundColor Yellow
     if ([string]::IsNullOrEmpty($Service)) {
         Write-Host "[*] Restarting all services..." -ForegroundColor Yellow
@@ -134,7 +143,7 @@ for ($attempt = 1; $attempt -le 15; $attempt++) {
 Write-Host ""
 
 # 6. Run migrations
-if ($NoMigrate) {
+if ($NoMigrate -and -not $MigrateOnly) {
     Write-Host "[*] Skipping migrations (-NoMigrate)" -ForegroundColor Yellow
 } else {
     Write-Host "[*] Running database migrations..." -ForegroundColor Yellow
@@ -142,6 +151,12 @@ if ($NoMigrate) {
     Write-Host "[OK] Migrations complete" -ForegroundColor Green
 }
 Write-Host ""
+
+if ($MigrateOnly) {
+	Write-Host "[*] Migration-only mode selesai." -ForegroundColor Yellow
+	Write-Host "[SUCCESS] Migration applied successfully." -ForegroundColor Green
+	exit 0
+}
 
 # 7. Show status
 Write-Host "[*] Service status:" -ForegroundColor Yellow
