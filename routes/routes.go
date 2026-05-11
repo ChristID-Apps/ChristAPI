@@ -40,8 +40,10 @@ func Setup(app *fiber.App) {
 
 	// contacts
 	protected.Get("/contacts", contacts.ListContacts)
+	protected.Get("/contacts/:id", contacts.ListContacts)
 	protected.Post("/contacts", contacts.CreateContact)
 	protected.Patch("/contacts/:id", contacts.UpdateContact)
+	protected.Delete("/contacts/:id", contacts.DeleteContact)
 
 	// news
 	protected.Get("/news", news.ListNews)
