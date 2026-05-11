@@ -1,79 +1,101 @@
 # Christ API
 
-REST API backend sederhana dibangun dengan Go + Fiber. Fokus: cepat dikembangkan, mudah dibaca, dan siap dikembangkan lebih lanjut.
-
-Ringkas dan langsung ke poin: berikut cara setup, cara ngoding, dan testing.
+REST API backend dibangun dengan Go + Fiber. Fokus: cepat dikembangkan, mudah dibaca, dan siap dikembangkan lebih lanjut.
 
 ---
 
-## Quick start
+## � Kamu Baru Clone Project? Mulai Di Sini!
 
-1. Copy repository
-
-```bash
+```
 git clone <repo-url>
 cd christ-api
+          ↓
+    👇 Pilih yang cocok 👇
+
+┌─────────────────────────────────────┐
+│ WINDOWS + Punya Docker Desktop?     │
+├─────────────────────────────────────┤
+│ ✅ Recommend: Run 1 command setup   │
+│                                     │
+│ powershell -ExecutionPolicy Bypass  │
+│   -File .\dalamNamaTuhan.ps1        │
+│                                     │
+│ ⏱️  Selesai dalam ~15 detik        │
+│                                     │
+│ 📖 Detail: [SETUP.md](./SETUP.md)  │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│ LINUX/macOS/Prefer Local Dev?       │
+├─────────────────────────────────────┤
+│ 📖 Read: [SETUP.md](./SETUP.md)     │
+│                                     │
+│ Pilih 2 cara:                       │
+│ • Docker (recommended untuk team)   │
+│ • Local (direct Go + PostgreSQL)    │
+└─────────────────────────────────────┘
 ```
-
-2. Buat database PostgreSQL
-
-```bash
-createdb christ_api
-```
-
-3. Buat file `.env` di root (conto):
-
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=secret
-DB_NAME=christ_api
-DB_SSLMODE=disable
-JWT_SECRET=changeme
-PORT=3000
-```
-
-4. Install deps dan run
-
-```bash
-go mod download
-go run cmd/server/main.go
-```
-
-Server default: http://localhost:3000
-
-Untuk menjalankan migrations SQL yang ada: gunakan `psql` atau `golang-migrate` (rekomendasi untuk production).
 
 ---
 
-## Struktur proyek (cepat)
+## 🚀 Quick Start
 
-- `cmd/server/main.go` — entry point
-- `routes/` — daftar endpoint
-- `internal/` — fitur (feature-based): setiap fitur biasanya punya `handler.go`, `service.go`, `repository.go`, `model.go`
-- `pkg/database` — koneksi DB
-- `migrations/` — SQL migration
+### Windows (1 Command):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1
+```
+**API ready at:** http://localhost:3001
 
-Konvensi penting:
-- Handler = thin (HTTP parsing + response)
-- Service = business logic
-- Repository = semua query database (parameterized queries)
-
-Catatan: beberapa modul saat ini menggunakan `database.DB` global; idealnya gunakan dependency injection (constructor) untuk testability.
-
----
-
-## Environment
-
-Pastikan environment variables di `.env` sudah diatur. Kunci yang biasa dipakai:
-- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`
-- `JWT_SECRET` — rahasiakan
-- `PORT` — server port
+### Atau baca [SETUP.md](./SETUP.md) untuk:
+- ✅ Penjelasan lengkap setiap step
+- ✅ Troubleshooting tips
+- ✅ Local setup (non-Docker)
+- ✅ Database access commands
 
 ---
 
-## Cara ngoding (singkat & praktis)
+## 📚 Dokumentasi Utama
+
+| File | Untuk Apa |
+|------|-----------|
+| **[SETUP.md](./SETUP.md)** | 👈 **Baca pertama!** Panduan setup lengkap |
+| [QUICKSTART.md](./QUICKSTART.md) | Cheat sheet commands |
+| [DOCKER.md](./DOCKER.md) | Docker detail & best practices |
+| [CHECKLIST.md](./CHECKLIST.md) | Development workflow |
+| [docs/schema.sql](./docs/schema.sql) | Database schema |
+
+---
+
+## 🏗️ Struktur Proyek
+
+```
+ChristAPI/
+├── cmd/server/           → Entry point (main.go)
+├── internal/             → Feature modules
+│   ├── auth/            → Authentication
+│   ├── bible/           → Bible module
+│   ├── contacts/        → Contacts
+│   ├── news/            → News
+│   └── ...
+├── pkg/                 → Reusable packages
+│   ├── database/        → DB connection
+│   └── jwt/             → JWT utilities
+├── routes/              → API endpoints registration
+├── migrations/          → SQL migrations
+├── SETUP.md             → 👈 Start here!
+└── docker-compose.yml   → Container orchestration
+```
+
+### Prinsip Struktur:
+Setiap fitur di `internal/<feature>/` punya 4 file:
+- **handler.go** — Parse request, return response (thin layer)
+- **service.go** — Business logic
+- **repository.go** — Database queries (parameterized)
+- **model.go** — Data structures
+
+---
+
+## ⚙️ Development
 
 1. Buat fitur baru di `internal/<feature>` dengan empat file:
    - `handler.go` — hanya parsing request dan return response
