@@ -25,6 +25,18 @@ Use case:
 - `-NoMigrate` = skip migration
 - cocok kalau kamu cuma restart service yang sudah ada
 
+### Restart fast (new)
+
+Gunakan opsi `-Restart` untuk restart container lebih cepat tanpa `down/up` (script akan skip build/migrate):
+
+```powershell
+# Restart all services (fast)
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -Restart
+
+# Restart only API service by name
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -Restart -Service golang-christapi
+```
+
 ---
 
 ## Setup Automation Scripts
