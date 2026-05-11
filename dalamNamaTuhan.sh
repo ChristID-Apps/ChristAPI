@@ -22,18 +22,13 @@ fi
 echo -e "${GREEN}✅ Docker is running${NC}"
 echo ""
 
-# 2. Check if .env exists, if not copy from .env.example
-echo "⚙️  Checking environment variables..."
-if [ ! -f .env ]; then
-    if [ ! -f .env.example ]; then
-        echo -e "${RED}❌ .env.example not found${NC}"
-        exit 1
-    fi
-    echo "📋 .env not found, copying from .env.example..."
-    cp .env.example .env
-    echo -e "${GREEN}✅ .env created${NC}"
+# 2. Check if .env.docker exists
+echo "⚙️  Checking Docker environment variables..."
+if [ ! -f .env.docker ]; then
+    echo -e "${RED}❌ .env.docker not found${NC}"
+    exit 1
 else
-    echo -e "${GREEN}✅ .env already exists${NC}"
+    echo -e "${GREEN}✅ .env.docker already exists${NC}"
 fi
 echo ""
 

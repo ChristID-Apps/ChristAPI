@@ -7,21 +7,8 @@
 ## Quick Start
 
 ### 1. Create `.env` file
-Copy dari `.env.example`:
-```bash
-cp .env.example .env
-```
-
-Edit `.env` dan ubah `JWT_SECRET` ke nilai yang aman untuk production:
-```
-DB_HOST=postgres
-DB_PORT=5432
-DB_USER=christ_user
-DB_PASSWORD=christ_password
-DB_NAME=christ_db
-DB_SSLMODE=disable
-JWT_SECRET=your-secure-secret-key-here
-```
+Docker compose sudah memakai `.env.docker` yang ada di root project.
+Kalau perlu ubah credential atau port, edit file itu lalu jalankan `docker compose up -d`.
 
 ### 2. Build dan Run dengan Docker Compose
 ```bash
@@ -31,7 +18,7 @@ docker-compose up -d
 Ini akan:
 - Build image Go aplikasi
 - Start PostgreSQL database
-- Start API server pada port 3000
+- Start API server pada host port 3001, dengan port internal container 3000
 
 ### 3. Verify Services Running
 ```bash
@@ -157,7 +144,7 @@ Untuk production, pastikan untuk:
 │       Docker Network            │
 │   (christ-network)              │
 ├─────────────────────────────────┤
-│ API Service (Port 3000)         │
+│ API Service (Port 3000 internal) │
 │ - Go Fiber Application          │
 │ - Routes: /api/*                │
 │ - Services: auth, bible, etc    │
