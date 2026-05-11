@@ -10,19 +10,24 @@ import (
 
 var secret []byte
 
-func init() {
-	s := os.Getenv("JWT_SECRET")
-	if s != "" {
+func loadSecret() []byte {
+	if len(secret) > 0 {
+		return secret
+	}
+
+	if s := os.Getenv("JWT_SECRET"); s != "" {
 		secret = []byte(s)
 	}
-}
 
-func Secret() []byte {
 	return secret
 }
 
+func Secret() []byte {
+	return loadSecret()
+}
+
 func GenerateToken(userID int) (string, error) {
-	if len(secret) == 0 {
+	if len(loadSecret()) == 0 {
 		return "", errors.New("JWT_SECRET is not configured")
 	}
 
@@ -33,5 +38,5 @@ func GenerateToken(userID int) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString(secret)
+	return token.SignedString(loadSecret())
 }
