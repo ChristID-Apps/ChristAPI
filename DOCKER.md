@@ -75,7 +75,27 @@ docker-compose exec api sh
 
 ## Using Makefile (Optional)
 
-Jika ada `make` installed di Windows, bisa gunakan shortcut commands:
+Kalau mau pakai `Makefile` di Windows, ada 2 hal yang harus ada:
+
+1. `make` harus ter-install
+2. Docker Desktop harus sedang berjalan
+
+### Cara install `make` di Windows
+
+Pilih salah satu:
+
+- **Scoop**:
+   ```powershell
+   scoop install make
+   ```
+- **Chocolatey**:
+   ```powershell
+   choco install make
+   ```
+- **WSL / Git Bash / MSYS2**:
+   install GNU Make lewat environment tersebut, lalu jalankan command `make` dari shell itu.
+
+Setelah itu, buka PowerShell / Git Bash / terminal yang sama dan jalankan:
 
 ```bash
 make docker-build       # Build image
@@ -87,6 +107,23 @@ make docker-shell       # Access API shell
 make docker-db-shell    # Access database shell
 make docker-clean       # Stop dan hapus volume
 ```
+
+### Kalau `make` tidak ada
+
+Kamu tetap bisa jalanin semua command tanpa Makefile, misalnya:
+
+```powershell
+docker compose build
+docker compose up -d
+docker compose logs -f
+docker compose down -v
+```
+
+### Catatan penting untuk Windows
+
+- Kalau pakai **PowerShell**, pastikan command `make` memang ditemukan di `PATH`.
+- Kalau `docker-compose` tidak ada, pakai `docker compose` langsung.
+- Untuk workflow paling gampang di Windows, tetap pakai `dalamNamaTuhan.ps1` karena itu sudah otomatis build, start, dan migration.
 
 ## Production Setup
 
