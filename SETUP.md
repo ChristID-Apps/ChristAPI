@@ -20,12 +20,23 @@ Setelah clone project ini, ada **2 cara** untuk menjalankan:
 powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1
 ```
 
+Kalau kamu cuma mau menjalankan container yang sudah ada, pakai mode run-only:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
+```
+
 **Apa yang terjadi otomatis:**
 - ✅ Build Docker image
 - ✅ Start PostgreSQL container
 - ✅ Start API container  
 - ✅ Run database migrations
 - ✅ Tampilkan status & connection info
+
+**Kalau pakai mode run-only:**
+- ✅ Lewatkan build image
+- ✅ Lewatkan migrasi
+- ✅ Hanya start ulang container dan cek status
 
 **Output (dalam ~15 detik):**
 ```

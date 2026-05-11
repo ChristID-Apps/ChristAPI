@@ -46,8 +46,14 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1
 ```
 **API ready at:** http://localhost:3001
 
+Kalau container sudah pernah dibuat dan kamu cuma mau menjalankan lagi tanpa build ulang:
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
+```
+
 ### Atau baca [SETUP.md](./SETUP.md) untuk:
 - ✅ Penjelasan lengkap setiap step
+- ✅ Mode full setup dan mode run-only
 - ✅ Troubleshooting tips
 - ✅ Local setup (non-Docker)
 - ✅ Database access commands

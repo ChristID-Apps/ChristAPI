@@ -12,6 +12,19 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1
 
 ✅ Done in ~15 seconds. API ready at http://localhost:3001
 
+### Run-only mode
+
+Kalau image sudah ada dan kamu cuma mau hidupkan container lagi tanpa build ulang:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -NoBuild -NoMigrate
+```
+
+Use case:
+- `-NoBuild` = skip build image
+- `-NoMigrate` = skip migration
+- cocok kalau kamu cuma restart service yang sudah ada
+
 ---
 
 ## Setup Automation Scripts
@@ -34,6 +47,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 - ✅ Waits for PostgreSQL healthy
 - ✅ Runs migrations
 - ✅ Shows connection info
+
+**Run-only mode:**
+- pakai `-NoBuild -NoMigrate`
+- tidak rebuild image
+- tidak jalankan migration lagi
 
 ---
 
