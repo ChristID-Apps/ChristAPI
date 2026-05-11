@@ -58,6 +58,8 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -NoBuild -NoMigrat
 - ✅ Local setup (non-Docker)
 - ✅ Database access commands
 
+Catatan singkat: `.env.local` dipakai untuk `go run`, sedangkan `.env.docker` dipakai Docker Compose.
+
 ---
 
 ## 📚 Dokumentasi Utama

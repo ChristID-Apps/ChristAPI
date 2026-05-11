@@ -102,13 +102,13 @@ psql -U postgres -c "CREATE DATABASE christ_db;"
 createdb christ_db
 ```
 
-### Step 2: Create `.env` file
+### Step 2: Edit `.env.local`
 
-Copy file `.env.example` atau buat `.env` baru di root folder:
+File `.env.local` sudah disiapkan di root folder. Sesuaikan kalau perlu:
 
 ```env
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=5433
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=christ_db
@@ -119,7 +119,11 @@ JWT_SECRET=your-secret-key-here-change-in-production
 
 **Sesuaikan:**
 - `DB_USER` & `DB_PASSWORD` dengan PostgreSQL setup kamu
+- Kalau PostgreSQL kamu jalan di Docker, pakai `DB_PORT=5433`
+- Kalau PostgreSQL kamu jalan lokal langsung, pakai `DB_PORT=5432`
 - `JWT_SECRET` dengan string random (production: gunakan secret manager)
+
+Untuk Docker full-stack, pakai `.env.docker` yang sudah disiapkan di root project.
 
 ### Step 3: Run Migrations
 
@@ -165,7 +169,7 @@ go run cmd/server/main.go
 
 ### Akses Project:
 - **API**: http://localhost:3000
-- **Database**: `localhost:5432`
+- **Database**: `localhost:5433` jika DB pakai Docker, atau `localhost:5432` jika DB lokal
 
 ---
 

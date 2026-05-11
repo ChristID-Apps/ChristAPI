@@ -174,9 +174,8 @@ curl -X POST http://localhost:3001/api/v1/auth/login `
 # 1. Create database
 createdb christ_db
 
-# 2. Copy .env.example to .env
-copy .env.example .env
-# Edit .env with your PostgreSQL credentials
+# 2. Edit .env.local
+# File .env.local sudah disiapkan untuk local development
 
 # 3. Run migrations
 migrate -path migrations -database "postgres://user:password@localhost:5432/christ_db?sslmode=disable" up
@@ -184,6 +183,8 @@ migrate -path migrations -database "postgres://user:password@localhost:5432/chri
 # 4. Start server
 go run cmd/server/main.go
 ```
+
+Kalau kamu pakai PostgreSQL dari Docker, pakai `DB_PORT=5433` dan tetap jalankan API local di `API_PORT=3000`.
 
 ### Stop Server
 ```
