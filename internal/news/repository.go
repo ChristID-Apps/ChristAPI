@@ -18,12 +18,12 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 	idx := 1
 
 	if filter.ID != nil {
-		query += ` AND id = $` + itoa(idx)
+		query += ` AND n.id = $` + itoa(idx)
 		args = append(args, *filter.ID)
 		idx++
 	}
 	if filter.SiteID != nil {
-		query += ` AND site_id = $` + itoa(idx)
+		query += ` AND n.site_id = $` + itoa(idx)
 		args = append(args, *filter.SiteID)
 		idx++
 	}
@@ -37,7 +37,7 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 	if filter.Limit == 0 {
 		filter.Limit = 25
 	}
-	query += ` ORDER BY published_at DESC NULLS LAST, created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
+	query += ` ORDER BY n.published_at DESC NULLS LAST, n.created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
 	args = append(args, filter.Limit, filter.Offset)
 
 	rows, err := database.DB.Query(query, args...)
