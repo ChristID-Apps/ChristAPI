@@ -6,7 +6,9 @@
 
 param(
     [switch]$NoBuild,
-    [switch]$NoMigrate
+    [switch]$NoMigrate,
+    [switch]$Restart,
+    [string]$Service = ""  # optional: service name to restart (e.g. golang-christapi)
 )
 
 $ErrorActionPreference = "Stop"
@@ -24,6 +26,25 @@ function Invoke-DockerCompose {
         $process = Start-Process -FilePath "docker" -ArgumentList (@("compose") + $Arguments) -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
         if ($process.ExitCode -ne 0) {
             throw "docker compose $($Arguments -join ' ') failed with exit code $($process.ExitCode)"
+        }
+    } finally {
+        Remove-Item $stdoutFile, $stderrFile -ErrorAction SilentlyContinue
+    }
+}
+
+function Invoke-DockerRaw {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    $stdoutFile = [System.IO.Path]::GetTempFileName()
+    $stderrFile = [System.IO.Path]::GetTempFileName()
+
+    try {
+        $process = Start-Process -FilePath "docker" -ArgumentList $Arguments -NoNewWindow -Wait -PassThru -RedirectStandardOutput $stdoutFile -RedirectStandardError $stderrFile
+        if ($process.ExitCode -ne 0) {
+            throw "docker $($Arguments -join ' ') failed with exit code $($process.ExitCode)"
         }
     } finally {
         Remove-Item $stdoutFile, $stderrFile -ErrorAction SilentlyContinue
@@ -60,8 +81,8 @@ if (-not (Test-Path ".env")) {
 Write-Host ""
 
 # 3. Build Docker image
-if ($NoBuild) {
-    Write-Host "[*] Skipping image build (-NoBuild)" -ForegroundColor Yellow
+if ($NoBuild -or $Restart) {
+    Write-Host "[*] Skipping image build (-NoBuild or -Restart)" -ForegroundColor Yellow
 } else {
     Write-Host "[*] Building Docker image..." -ForegroundColor Yellow
     Invoke-DockerCompose -Arguments @("build", "--no-cache")
@@ -69,12 +90,39 @@ if ($NoBuild) {
 }
 Write-Host ""
 
-# 4. Start services
-Write-Host "[*] Starting services (postgres, api)..." -ForegroundColor Yellow
-Invoke-DockerCompose -Arguments @("down")
-Invoke-DockerCompose -Arguments @("up", "-d")
-Write-Host "[OK] Services started" -ForegroundColor Green
-Write-Host ""
+# 4. Start or Restart services
+if ($Restart) {
+    Write-Host "[*] Restart mode (-Restart)" -ForegroundColor Yellow
+    if ([string]::IsNullOrEmpty($Service)) {
+        Write-Host "[*] Restarting all services..." -ForegroundColor Yellow
+        Invoke-DockerCompose -Arguments @("restart")
+    } else {
+        Write-Host "[*] Restarting service: $Service" -ForegroundColor Yellow
+        try {
+            Invoke-DockerCompose -Arguments @("restart", $Service)
+        } catch {
+            Write-Host "[WARN] 'docker compose restart $Service' failed, trying 'docker restart $Service' (container-level)" -ForegroundColor Yellow
+            try {
+                Invoke-DockerRaw -Arguments @("restart", $Service)
+            } catch {
+                Write-Host "[ERROR] Failed to restart service/container: $Service" -ForegroundColor Red
+                throw
+            }
+        }
+    }
+
+    Write-Host "[OK] Services restarted" -ForegroundColor Green
+    Write-Host ""
+
+    # If we're in restart mode, skip build and migrations steps (fast-path)
+    Write-Host "[*] Skipping build/migrate in restart mode" -ForegroundColor Yellow
+} else {
+    Write-Host "[*] Starting services (postgres, api)..." -ForegroundColor Yellow
+    Invoke-DockerCompose -Arguments @("down")
+    Invoke-DockerCompose -Arguments @("up", "-d")
+    Write-Host "[OK] Services started" -ForegroundColor Green
+    Write-Host ""
+}
 
 # 5. Wait for postgres to be healthy (simplified approach)
 Write-Host "[*] Waiting for PostgreSQL to be healthy..." -ForegroundColor Yellow
