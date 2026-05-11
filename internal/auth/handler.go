@@ -2,6 +2,7 @@ package auth
 
 import (
 	"christ-api/internal/contacts"
+	"christ-api/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -25,28 +26,16 @@ func Login(c *fiber.Ctx) error {
 	req := new(Request)
 
 	if err := c.BodyParser(req); err != nil {
-		return c.Status(400).JSON(fiber.Map{
-			"error": "invalid request",
-		})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 
 	token, user, err := service.Login(req.Email, req.Password, req.SiteID)
 	if err != nil {
-		return c.Status(401).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+		return response.Error(c, 401, "Invalid credentials", nil)
 	}
 
-	resp := LoginSuccessResponse{
-		Success: true,
-		Message: "Login berhasil",
-		Data: LoginDataResponse{
-			User:  *user,
-			Token: token,
-		},
-	}
-
-	return c.JSON(resp)
+	data := LoginDataResponse{User: *user, Token: token}
+	return response.Success(c, "Login berhasil", data)
 }
 
 func Register(c *fiber.Ctx) error {
@@ -63,16 +52,26 @@ func Register(c *fiber.Ctx) error {
 
 	req := new(Request)
 	if err := c.BodyParser(req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 
-	if req.FullName == "" || req.Email == "" || req.Password == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "full_name, email and password are required"})
+	validationErrs := make(map[string][]string)
+	if req.FullName == "" {
+		validationErrs["full_name"] = append(validationErrs["full_name"], "Full name is required")
+	}
+	if req.Email == "" {
+		validationErrs["email"] = append(validationErrs["email"], "Email is required")
+	}
+	if req.Password == "" {
+		validationErrs["password"] = append(validationErrs["password"], "Password is required")
+	}
+	if len(validationErrs) > 0 {
+		return response.Error(c, 422, "Validation failed", validationErrs)
 	}
 
 	token, user, contact, err := service.RegisterWithContact(req.FullName, req.Phone, req.Address, req.ContactSiteID, req.Email, req.Password, req.RoleID, req.SiteID)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to register user", nil)
 	}
 
 	resp := struct {
@@ -85,5 +84,5 @@ func Register(c *fiber.Ctx) error {
 		Contact: contact,
 	}
 
-	return c.Status(201).JSON(resp)
+	return response.Created(c, "User registered", resp)
 }

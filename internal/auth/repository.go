@@ -16,7 +16,7 @@ func (r *AuthRepository) FindByEmail(email string) (*User, error) {
 		return nil, sql.ErrConnDone
 	}
 
-	query := `SELECT id, uuid, email, password_hash, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id FROM users WHERE email = $1 LIMIT 1`
+	query := `SELECT id, uuid, email, password_hash, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance FROM users WHERE email = $1 LIMIT 1`
 	row := r.DB.QueryRow(query, email)
 	var roleID sql.NullInt64
 	var contactID sql.NullInt64
@@ -24,7 +24,7 @@ func (r *AuthRepository) FindByEmail(email string) (*User, error) {
 	var lastLogin sql.NullTime
 	var createdAt sql.NullTime
 	var updatedAt sql.NullTime
-	err := row.Scan(&user.ID, &user.UUID, &user.Email, &user.Password, &roleID, &contactID, &user.IsActive, &lastLogin, &createdAt, &updatedAt, &siteID)
+	err := row.Scan(&user.ID, &user.UUID, &user.Email, &user.Password, &roleID, &contactID, &user.IsActive, &lastLogin, &createdAt, &updatedAt, &siteID, &user.PointsBalance)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -63,7 +63,7 @@ func (r *AuthRepository) CreateUser(email, passwordHash string, roleID, siteID, 
 	}
 
 	var user User
-	query := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, TRUE, NOW(), NOW()) RETURNING id, uuid, email, password_hash, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id`
+	query := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, TRUE, NOW(), NOW()) RETURNING id, uuid, email, password_hash, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
 	row := r.DB.QueryRow(query, email, passwordHash, roleID, siteID, contactID)
 
 	var roleIDN sql.NullInt64
@@ -73,7 +73,7 @@ func (r *AuthRepository) CreateUser(email, passwordHash string, roleID, siteID, 
 	var createdAt sql.NullTime
 	var updatedAt sql.NullTime
 
-	err := row.Scan(&user.ID, &user.UUID, &user.Email, &user.Password, &roleIDN, &contactIDN, &user.IsActive, &lastLoginN, &createdAt, &updatedAt, &siteIDN)
+	err := row.Scan(&user.ID, &user.UUID, &user.Email, &user.Password, &roleIDN, &contactIDN, &user.IsActive, &lastLoginN, &createdAt, &updatedAt, &siteIDN, &user.PointsBalance)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,8 @@ func (r *AuthRepository) GetLoginUserProfile(userID int64) (*LoginUserResponse, 
 			u.id,
 			COALESCE(c.full_name, ''),
 			u.email,
-			COALESCE(ro.name, '')
+			COALESCE(ro.name, ''),
+			COALESCE(u.points_balance, 0)
 		FROM users u
 		LEFT JOIN contacts c ON c.id = u.contact_id
 		LEFT JOIN roles ro ON ro.id = u.role_id
@@ -133,7 +134,7 @@ func (r *AuthRepository) GetLoginUserProfile(userID int64) (*LoginUserResponse, 
 
 	var p LoginUserResponse
 	row := r.DB.QueryRow(query, userID)
-	if err := row.Scan(&p.ID, &p.Name, &p.Email, &p.Role); err != nil {
+	if err := row.Scan(&p.ID, &p.Name, &p.Email, &p.Role, &p.Points); err != nil {
 		return nil, err
 	}
 
@@ -191,7 +192,7 @@ func (r *AuthRepository) CreateContactAndUser(fullName string, phone *string, ad
 
 	// insert user with contact_id
 	var user User
-	userQuery := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,TRUE,NOW(),NOW()) RETURNING id, uuid, email, password_hash, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id`
+	userQuery := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,TRUE,NOW(),NOW()) RETURNING id, uuid, email, password_hash, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
 
 	var roleIDN sql.NullInt64
 	var contactIDN sql.NullInt64
@@ -201,7 +202,7 @@ func (r *AuthRepository) CreateContactAndUser(fullName string, phone *string, ad
 	var updatedUN sql.NullTime
 
 	row = tx.QueryRow(userQuery, email, passwordHash, roleID, userSiteID, c.ID)
-	if err := row.Scan(&user.ID, &user.UUID, &user.Email, &user.Password, &roleIDN, &contactIDN, &user.IsActive, &lastLoginN, &createdUN, &updatedUN, &siteIDUN); err != nil {
+	if err := row.Scan(&user.ID, &user.UUID, &user.Email, &user.Password, &roleIDN, &contactIDN, &user.IsActive, &lastLoginN, &createdUN, &updatedUN, &siteIDUN, &user.PointsBalance); err != nil {
 		rollback()
 		return nil, nil, err
 	}

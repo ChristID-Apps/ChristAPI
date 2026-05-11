@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strconv"
 
+	"christ-api/pkg/response"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -20,27 +21,24 @@ func ListContacts(c *fiber.Ctx) error {
 	if idStr != "" {
 		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+			return response.Error(c, 422, "Invalid id", nil)
 		}
 		ct, err := service.GetByID(id)
 		if err != nil {
 			if err == sql.ErrNoRows {
-				return c.Status(404).JSON(fiber.Map{"error": "contact not found"})
+				return response.Error(c, 404, "Contact not found", nil)
 			}
-			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+			return response.Error(c, 500, "Failed to retrieve contact", nil)
 		}
-		return c.JSON(ct)
+		return response.Success(c, "Contact retrieved", ct)
 	}
 
 	out, err := service.List(page, limit)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to list contacts", nil)
 	}
-	return c.JSON(fiber.Map{
-		"page":  page,
-		"limit": limit,
-		"data":  out,
-	})
+	meta := map[string]interface{}{"page": page, "limit": limit}
+	return response.Paginated(c, "Contacts retrieved", out, meta)
 }
 
 func CreateContact(c *fiber.Ctx) error {
@@ -52,20 +50,20 @@ func CreateContact(c *fiber.Ctx) error {
 	}
 	r := new(Req)
 	if err := c.BodyParser(r); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 	ct, err := service.Create(r.FullName, r.Phone, r.Address, r.SiteID)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to create contact", nil)
 	}
-	return c.Status(201).JSON(ct)
+	return response.Created(c, "Contact created", ct)
 }
 
 func UpdateContact(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		return response.Error(c, 422, "Invalid id", nil)
 	}
 	type Req struct {
 		FullName string  `json:"full_name"`
@@ -75,31 +73,31 @@ func UpdateContact(c *fiber.Ctx) error {
 	}
 	r := new(Req)
 	if err := c.BodyParser(r); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 	ct, err := service.Update(id, r.FullName, r.Phone, r.Address, r.SiteID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(404).JSON(fiber.Map{"error": "contact not found"})
+			return response.Error(c, 404, "Contact not found", nil)
 		}
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to update contact", nil)
 	}
-	return c.JSON(ct)
+	return response.Success(c, "Contact updated", ct)
 }
 
 func DeleteContact(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid id"})
+		return response.Error(c, 422, "Invalid id", nil)
 	}
 
 	ct, err := service.Delete(id)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.Status(404).JSON(fiber.Map{"error": "contact not found"})
+			return response.Error(c, 404, "Contact not found", nil)
 		}
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to delete contact", nil)
 	}
-	return c.JSON(ct)
+	return response.Success(c, "Contact deleted", ct)
 }

@@ -3,6 +3,7 @@ package news
 import (
 	"strconv"
 
+	"christ-api/pkg/response"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -37,43 +38,43 @@ func ListNews(c *fiber.Ctx) error {
 
 	out, err := service.List(filter)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to list news", nil)
 	}
-	return c.JSON(out)
+	return response.Success(c, "News retrieved", out)
 }
 
 func CreateNews(c *fiber.Ctx) error {
 	var req News
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 	created, err := service.Create(&req)
 	if err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to create news", nil)
 	}
-	return c.Status(201).JSON(created)
+	return response.Created(c, "News created", created)
 }
 
 func UpdateNews(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 	var req News
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(400).JSON(fiber.Map{"error": "invalid request"})
+		return response.Error(c, 422, "Invalid request", nil)
 	}
 	req.UUID = uuid
 	if err := service.Update(&req); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to update news", nil)
 	}
-	return c.SendStatus(204)
+	return response.Success(c, "News updated", nil)
 }
 
 func DeleteNews(c *fiber.Ctx) error {
 	uuid := c.Params("uuid")
 	if uuid == "" {
-		return c.Status(400).JSON(fiber.Map{"error": "uuid required"})
+		return response.Error(c, 422, "uuid required", nil)
 	}
 	if err := service.Delete(uuid); err != nil {
-		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+		return response.Error(c, 500, "Failed to delete news", nil)
 	}
-	return c.SendStatus(204)
+	return response.Success(c, "News deleted", nil)
 }
