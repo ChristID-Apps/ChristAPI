@@ -23,6 +23,8 @@ DB_SSLMODE=disable
 JWT_SECRET=your-secure-secret-key-here
 ```
 
+Kalau `JWT_SECRET` kosong, aplikasi akan gagal start. Ini sengaja supaya tidak jalan dengan secret default yang lemah.
+
 ### 2. Build dan Run dengan Docker Compose
 ```bash
 docker-compose up -d

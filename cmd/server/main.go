@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"christ-api/internal/auth"
 	"christ-api/internal/middleware"
@@ -16,6 +17,10 @@ func main() {
 	// load env dulu
 	if err := godotenv.Load(); err != nil {
 		log.Fatal("❌ .env tidak terbaca")
+	}
+
+	if os.Getenv("JWT_SECRET") == "" {
+		log.Fatal("❌ JWT_SECRET wajib diisi")
 	}
 
 	// connect database
