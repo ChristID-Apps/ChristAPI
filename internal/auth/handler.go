@@ -30,16 +30,23 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
-	token, err := service.Login(req.Email, req.Password, req.SiteID)
+	token, user, err := service.Login(req.Email, req.Password, req.SiteID)
 	if err != nil {
 		return c.Status(401).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"token": token,
-	})
+	resp := LoginSuccessResponse{
+		Success: true,
+		Message: "Login berhasil",
+		Data: LoginDataResponse{
+			User:  *user,
+			Token: token,
+		},
+	}
+
+	return c.JSON(resp)
 }
 
 func Register(c *fiber.Ctx) error {
@@ -50,6 +57,7 @@ func Register(c *fiber.Ctx) error {
 		ContactSiteID *int64  `json:"contact_site_id"`
 		Email         string  `json:"email"`
 		Password      string  `json:"password"`
+		RoleID        *int64  `json:"role_id"`
 		SiteID        *int64  `json:"site_id"`
 	}
 
@@ -62,7 +70,7 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "full_name, email and password are required"})
 	}
 
-	token, user, contact, err := service.RegisterWithContact(req.FullName, req.Phone, req.Address, req.ContactSiteID, req.Email, req.Password, req.SiteID)
+	token, user, contact, err := service.RegisterWithContact(req.FullName, req.Phone, req.Address, req.ContactSiteID, req.Email, req.Password, req.RoleID, req.SiteID)
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
