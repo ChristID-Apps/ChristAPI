@@ -17,11 +17,11 @@ func ValidateCreateRoleRequest(req *requests.CreateRoleRequest) error {
 }
 
 func ValidateUpdateRoleRequest(req *requests.UpdateRoleRequest) error {
-	if req.Name == "" {
-		return errors.New("name is required")
+	if req.Present["name"] && (req.Name == nil || *req.Name == "") {
+		return errors.New("name cannot be empty")
 	}
-	if req.Code == "" {
-		return errors.New("code is required")
+	if req.Present["code"] && (req.Code == nil || *req.Code == "") {
+		return errors.New("code cannot be empty")
 	}
 	return nil
 }

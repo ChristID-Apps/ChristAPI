@@ -1,5 +1,7 @@
 package role
 
+import "christ-api/internal/role/dto/requests"
+
 type RoleService struct {
 	Repo *RoleRepository
 }
@@ -12,8 +14,8 @@ func (s *RoleService) Create(name string, code string, description *string, site
 	return s.Repo.Create(name, code, description, siteID)
 }
 
-func (s *RoleService) Update(id int64, name string, code string, description *string) (*Role, error) {
-	return s.Repo.Update(id, name, code, description)
+func (s *RoleService) Update(id int64, req *requests.UpdateRoleRequest) (*Role, error) {
+	return s.Repo.Update(id, req)
 }
 
 func (s *RoleService) GetByID(id int64) (*Role, error) {

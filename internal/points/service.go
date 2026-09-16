@@ -1,9 +1,14 @@
 package points
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
+
+var ErrInsufficientPoints = errors.New("insufficient points")
 
 type Service struct {
-	Repo Repository
+	Repo *Repository
 }
 
 func (s *Service) GetState(userID int64, siteID *int64, offset, limit int) (*PointsState, error) {
@@ -22,6 +27,7 @@ func (s *Service) Earn(userID, amount int64, reason string, referenceID *string)
 	if amount <= 0 {
 		return nil, errors.New("amount must be greater than 0")
 	}
+	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		reason = "manual_earn"
 	}
@@ -32,6 +38,7 @@ func (s *Service) Spend(userID, amount int64, reason string, referenceID *string
 	if amount <= 0 {
 		return nil, errors.New("amount must be greater than 0")
 	}
+	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		reason = "manual_spend"
 	}

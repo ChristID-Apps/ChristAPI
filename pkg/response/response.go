@@ -1,6 +1,10 @@
 package response
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"log"
+
+	"github.com/gofiber/fiber/v2"
+)
 
 type ApiResponse struct {
 	Success bool        `json:"success"`
@@ -20,6 +24,14 @@ func Created(c *fiber.Ctx, message string, data interface{}) error {
 
 func Error(c *fiber.Ctx, status int, message string, errors interface{}) error {
 	return c.Status(status).JSON(ApiResponse{Success: false, Message: message, Errors: errors})
+}
+
+func ErrorDetail(c *fiber.Ctx, status int, message string, err error) error {
+	if err == nil {
+		return Error(c, status, message, nil)
+	}
+	log.Printf("api error: %s: %v", message, err)
+	return Error(c, status, message, nil)
 }
 
 func Paginated(c *fiber.Ctx, message string, data interface{}, meta interface{}) error {

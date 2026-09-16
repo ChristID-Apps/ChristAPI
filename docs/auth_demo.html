@@ -53,6 +53,13 @@
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        input[type="number"], input[type="url"], input[type="datetime-local"], textarea, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
         button {
             background-color: #3498db;
             color: #fff;
@@ -275,6 +282,7 @@
             <button class="admin-btn" onclick="listRoles()">List All Roles</button>
             <div style="flex: 1; min-width: 200px;">
                 <input type="text" id="new-role-name" placeholder="Role name" style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+                <input type="text" id="new-role-code" placeholder="Role code (e.g. editor)" style="width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
                 <textarea id="new-role-desc" placeholder="Role description (optional)" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; height: 60px;"></textarea>
             </div>
             <button class="admin-btn" onclick="createRole()" style="align-self: flex-end;">Create Role</button>
@@ -295,6 +303,119 @@
             </tbody>
         </table>
         <div id="roles-log" class="log-box" style="margin-top: 15px; height: 100px;">Roles operations log will appear here...</div>
+    </div>
+
+    <!-- Resource API Testing -->
+    <div class="card full-width">
+        <h2>Resource API Testing</h2>
+        <p>Login terlebih dahulu. Semua tombol di bawah mengirim request ke API menggunakan JWT aktif.</p>
+
+        <div class="container" style="margin-top: 15px;">
+            <div class="card" style="box-shadow: none; border: 1px solid #ecf0f1;">
+                <h3>Contacts</h3>
+                <div class="form-group"><label>ID contact (untuk detail/update/delete)</label><input type="number" id="contact-id" placeholder="1"></div>
+                <div class="form-group"><label>Nama lengkap</label><input type="text" id="contact-name" placeholder="John Doe"></div>
+                <div class="form-group"><label>Telepon</label><input type="text" id="contact-phone" placeholder="+62812345678"></div>
+                <div class="form-group"><label>Alamat</label><input type="text" id="contact-address" placeholder="Jl. Contoh No. 1"></div>
+                <div class="form-group"><label>Site ID</label><input type="number" id="contact-site-id" placeholder="1"></div>
+                <button onclick="listContacts()">List Contacts</button>
+                <button onclick="getContact()">Get by ID</button>
+                <button onclick="createContact()">Create</button>
+                <button onclick="updateContact()">Update</button>
+                <button onclick="deleteContact()" class="secondary">Delete</button>
+                <div id="contacts-log" class="log-box">Contacts response...</div>
+            </div>
+
+            <div class="card" style="box-shadow: none; border: 1px solid #ecf0f1;">
+                <h3>Sites</h3>
+                <div class="form-group"><label>UUID (untuk update)</label><input type="text" id="site-uuid" placeholder="uuid"></div>
+                <div class="form-group"><label>Nama site</label><input type="text" id="site-name" placeholder="Main Site"></div>
+                <div class="form-group"><label>Alamat</label><input type="text" id="site-address" placeholder="Jl. Contoh No. 1"></div>
+                <button onclick="listSites()">List Sites</button>
+                <button onclick="createSite()">Create</button>
+                <button onclick="updateSite()">Update</button>
+                <div id="sites-log" class="log-box">Sites response...</div>
+            </div>
+
+            <div class="card" style="box-shadow: none; border: 1px solid #ecf0f1;">
+                <h3>Points</h3>
+                <div class="form-group"><label>User ID (kosongkan untuk semua balance)</label><input type="number" id="points-user-id" placeholder="1"></div>
+                <div class="form-group"><label>Site ID (optional)</label><input type="number" id="points-site-id" placeholder="1"></div>
+                <div class="form-group"><label>Amount</label><input type="number" id="points-amount" placeholder="10"></div>
+                <div class="form-group"><label>Reason</label><input type="text" id="points-reason" placeholder="manual adjustment"></div>
+                <div class="form-group"><label>Reference ID</label><input type="text" id="points-reference" placeholder="ref-001"></div>
+                <button onclick="getPoints()">Get Points</button>
+                <button onclick="earnPoints()">Earn</button>
+                <button onclick="spendPoints()">Spend</button>
+                <div id="points-log" class="log-box">Points response...</div>
+            </div>
+
+            <div class="card" style="box-shadow: none; border: 1px solid #ecf0f1;">
+                <h3>News</h3>
+                <div class="form-group"><label>UUID (untuk update/delete)</label><input type="text" id="news-uuid" placeholder="uuid"></div>
+                <div class="form-group"><label>Search / Site ID</label><input type="text" id="news-search" placeholder="search term"></div>
+                <div class="form-group"><label>Title</label><input type="text" id="news-title" placeholder="News title"></div>
+                <div class="form-group"><label>Slug</label><input type="text" id="news-slug" placeholder="news-title"></div>
+                <div class="form-group"><label>Excerpt</label><input type="text" id="news-excerpt" placeholder="Short excerpt"></div>
+                <div class="form-group"><label>Content</label><textarea id="news-content" placeholder="News content"></textarea></div>
+                <div class="form-group"><label>Author ID / Site ID</label><input type="number" id="news-author-id" placeholder="1"><input type="number" id="news-site-id" placeholder="1" style="margin-top: 5px;"></div>
+                <div class="form-group"><label>Status</label><select id="news-status"><option value="draft">draft</option><option value="published">published</option></select></div>
+                <button onclick="listNews()">List News</button>
+                <button onclick="createNews()">Create</button>
+                <button onclick="updateNews()">Update</button>
+                <button onclick="deleteNews()" class="secondary">Delete</button>
+                <div id="news-log" class="log-box">News response...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card full-width">
+        <h2>Activities</h2>
+        <p>List dapat diakses user login. Create, update, dan delete memerlukan role admin.</p>
+        <div class="container" style="margin-top: 15px;">
+            <div class="card" style="box-shadow: none; border: 1px solid #ecf0f1;">
+                <h3>Activity Form</h3>
+                <div class="form-group"><label>UUID (untuk edit/delete)</label><input type="text" id="activity-uuid" placeholder="uuid"></div>
+                <div class="form-group"><label>Title</label><input type="text" id="activity-title" placeholder="Kebaktian Minggu"></div>
+                <div class="form-group"><label>Description</label><textarea id="activity-description" placeholder="Deskripsi kegiatan"></textarea></div>
+                <div class="form-group"><label>Category ID</label><input type="number" id="activity-category-id" placeholder="1"></div>
+                <div class="form-group"><label>Type</label><select id="activity-type" onchange="toggleActivitySchedule()"><option value="one_time">One time</option><option value="recurring">Recurring</option></select></div>
+                <div class="form-group"><label>Site ID</label><input type="number" id="activity-site-id" placeholder="1"></div>
+                <div class="form-group"><label>Status</label><select id="activity-status"><option value="draft">Draft</option><option value="published">Published</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></div>
+                <div class="form-group"><label>Max participants</label><input type="number" id="activity-max-participants" placeholder="100"></div>
+                <label><input type="checkbox" id="activity-registration"> Requires registration</label>
+                <label><input type="checkbox" id="activity-streak-enabled" onchange="toggleActivityStreak()"> Enable streak</label>
+                <div id="activity-streak-fields" style="display: none; margin-top: 10px;">
+                    <div class="form-group"><label>Streak type</label><input type="text" id="activity-streak-type" placeholder="daily_bible_reading"></div>
+                    <div class="form-group"><label>Reward points</label><input type="number" id="activity-streak-points" placeholder="5" min="0"></div>
+                </div>
+                <div id="activity-occurrence-fields">
+                    <div class="form-group"><label>Starts at</label><input type="datetime-local" id="activity-starts-at"></div>
+                    <div class="form-group"><label>Ends at</label><input type="datetime-local" id="activity-ends-at"></div>
+                    <div class="form-group"><label>Location</label><input type="text" id="activity-location" placeholder="Gedung Gereja"></div>
+                </div>
+                <div id="activity-schedule-fields" style="display: none;">
+                    <div class="form-group"><label>Frequency</label><select id="activity-frequency"><option value="weekly">Weekly</option><option value="daily">Daily</option><option value="monthly">Monthly</option></select></div>
+                    <div class="form-group"><label>Start date</label><input type="date" id="activity-start-date"></div>
+                    <div class="form-group"><label>Start time</label><input type="time" id="activity-start-time"></div>
+                    <div class="form-group"><label>End time</label><input type="time" id="activity-end-time"></div>
+                    <div class="form-group"><label>Days of week, 0 Sunday to 6 Saturday</label><input type="text" id="activity-days" placeholder="0"></div>
+                </div>
+                <button class="admin-btn" onclick="createActivity()">Create</button>
+                <button class="admin-btn" onclick="updateActivity()">Edit</button>
+                <button class="secondary" onclick="deleteActivity()">Delete</button>
+                <button onclick="checkInStreak()">Check-in Streak</button>
+            </div>
+            <div class="card" style="box-shadow: none; border: 1px solid #ecf0f1;">
+                <h3>Activity List</h3>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <input type="text" id="activity-search" placeholder="Search activity" style="flex:1; min-width:160px;">
+                    <button onclick="listActivities()">Refresh</button>
+                        <button onclick="listMyStreaks()">My Streaks</button>
+                </div>
+                <div id="activities-log" class="log-box">Activities response...</div>
+            </div>
+        </div>
     </div>
 
     <!-- Test Scenarios -->
@@ -333,6 +454,7 @@
     <script>
         const API_URL = "http://localhost:3000/api";
         let jwtToken = localStorage.getItem("jwt_token") || "";
+        let loggedInUser = JSON.parse(localStorage.getItem("auth_user") || "null");
 
         // UI Initial Load
         if (jwtToken) {
@@ -350,9 +472,23 @@
 
         function clearToken() {
             jwtToken = "";
+            loggedInUser = null;
             localStorage.removeItem("jwt_token");
+            localStorage.removeItem("auth_user");
             updateTokenDisplay();
             log("Token cleared.");
+        }
+
+        function setSession(token, user) {
+            jwtToken = token;
+            loggedInUser = user || null;
+            localStorage.setItem("jwt_token", jwtToken);
+            if (loggedInUser) {
+                localStorage.setItem("auth_user", JSON.stringify(loggedInUser));
+            } else {
+                localStorage.removeItem("auth_user");
+            }
+            updateTokenDisplay();
         }
 
         async function doLogin() {
@@ -369,14 +505,7 @@
                 const result = await res.json();
                 log("Login Response", result);
                 if (result.success && result.data?.token) {
-                    jwtToken = result.data.token;
-                    localStorage.setItem("jwt_token", jwtToken);
-                    updateTokenDisplay();
-                    if (result.data.user) {
-                        document.getElementById("user-email").innerText = result.data.user.email || result.data.user.name;
-                        document.getElementById("user-role").innerText = result.data.user.role || "User";
-                        document.getElementById("user-points").innerText = result.data.user.points || "0";
-                    }
+                    setSession(result.data.token, result.data.user);
                     log(`✅ Login sukses sebagai ${result.data.user?.email}`);
                 } else {
                     alert("Login gagal: " + result.message);
@@ -453,7 +582,14 @@
                 display.innerText = "Bearer " + jwtToken;
                 display.style.color = "#27ae60";
                 logoutBtn.style.display = "inline-block";
-                userInfo.style.display = "block";
+                if (loggedInUser) {
+                    document.getElementById("user-email").innerText = loggedInUser.email || loggedInUser.name || "-";
+                    document.getElementById("user-role").innerText = loggedInUser.role || "User";
+                    document.getElementById("user-points").innerText = loggedInUser.points ?? "0";
+                    userInfo.style.display = "block";
+                } else {
+                    userInfo.style.display = "none";
+                }
             } else {
                 display.innerText = "No token stored. Register/Login to get a token.";
                 display.style.color = "#7f8c8d";
@@ -493,9 +629,7 @@
                     } else if (data.status === "pending_approval") {
                         log("⏳ Akun Google ini sedang menunggu approval admin.");
                     } else if (data.token) {
-                        jwtToken = data.token;
-                        localStorage.setItem("jwt_token", jwtToken);
-                        updateTokenDisplay();
+                        setSession(data.token, data.user);
                         log("✅ Google Login sukses!");
                     } else {
                         log("Status Google Login: " + data.status);
@@ -978,9 +1112,9 @@
                         tr.innerHTML = `
                             <td style="padding: 8px;">${role.id}</td>
                             <td style="padding: 8px;">${role.name}</td>
-                            <td style="padding: 8px;">${role.description || '-'}</td>
+                            <td style="padding: 8px;">${role.description || '-'} (${role.code || '-'})</td>
                             <td style="padding: 8px;">
-                                <button onclick="editRole(${role.id}, '${role.name}')" class="secondary" style="padding: 5px 10px;">Edit</button>
+                                <button onclick="editRole(${role.id}, '${role.name}', '${role.code || ''}', '${role.description || ''}')" class="secondary" style="padding: 5px 10px;">Edit</button>
                             </td>
                         `;
                         tbody.appendChild(tr);
@@ -995,10 +1129,11 @@
 
         async function createRole() {
             const name = document.getElementById("new-role-name").value;
+            const code = document.getElementById("new-role-code").value;
             const description = document.getElementById("new-role-desc").value;
 
-            if (!name) {
-                alert("Role name wajib diisi!");
+            if (!name || !code) {
+                alert("Role name dan code wajib diisi!");
                 return;
             }
 
@@ -1012,6 +1147,7 @@
                     },
                     body: JSON.stringify({
                         name: name,
+                        code: code,
                         description: description || null
                     })
                 });
@@ -1022,6 +1158,7 @@
                 if (result.success) {
                     alert("Role berhasil dibuat!");
                     document.getElementById("new-role-name").value = "";
+                    document.getElementById("new-role-code").value = "";
                     document.getElementById("new-role-desc").value = "";
                     listRoles();
                 } else {
@@ -1032,12 +1169,321 @@
             }
         }
 
-        function editRole(id, name) {
+        async function editRole(id, name, code, description) {
             const newName = prompt(`Edit role name (current: ${name})`);
             if (!newName) return;
+            const newCode = prompt(`Edit role code (current: ${code})`, code);
+            if (!newCode) return;
+            const newDescription = prompt("Edit description", description || "");
+            try {
+                const result = await apiRequest(`/admin/roles/${id}`, {
+                    method: "PATCH",
+                    body: { name: newName, code: newCode, description: newDescription || null }
+                });
+                rolesLog("Update Role Response", result.data);
+                listRoles();
+            } catch (error) {
+                rolesLog("Error Update Role", error);
+            }
+        }
 
-            // TODO: Implement update role endpoint
-            alert("Update role functionality coming soon");
+        function value(id) {
+            return document.getElementById(id).value.trim();
+        }
+
+        function optionalInt(id) {
+            const raw = value(id);
+            return raw === "" ? undefined : Number(raw);
+        }
+
+        async function apiRequest(path, options = {}) {
+            const headers = { "Content-Type": "application/json" };
+            if (jwtToken) headers.Authorization = `Bearer ${jwtToken}`;
+            const request = { method: options.method || "GET", headers };
+            if (options.body !== undefined) request.body = JSON.stringify(options.body);
+            const response = await fetch(`${API_URL}${path}`, request);
+            const data = await response.json();
+            if (!response.ok) throw new Error(`${response.status}: ${data.message || "Request failed"}`);
+            return { response, data };
+        }
+
+        function resourceLog(id, message, data = null) {
+            const logBox = document.getElementById(id);
+            logBox.innerText = `${message}\n${data ? JSON.stringify(data, null, 2) : ""}`;
+        }
+
+        async function listContacts() {
+            try {
+                const page = 1;
+                const result = await apiRequest(`/contacts?page=${page}&limit=20`);
+                resourceLog("contacts-log", "List Contacts", result.data);
+            } catch (error) { resourceLog("contacts-log", error.message); }
+        }
+
+        async function getContact() {
+            const id = value("contact-id");
+            if (!id) return alert("Contact ID wajib diisi");
+            try {
+                const result = await apiRequest(`/contacts/${id}`);
+                resourceLog("contacts-log", "Get Contact", result.data);
+            } catch (error) { resourceLog("contacts-log", error.message); }
+        }
+
+        function contactPayload() {
+            return {
+                full_name: value("contact-name"),
+                phone: value("contact-phone") || null,
+                address: value("contact-address") || null,
+                site_id: optionalInt("contact-site-id") ?? null
+            };
+        }
+
+        async function createContact() {
+            try {
+                const result = await apiRequest("/contacts", { method: "POST", body: contactPayload() });
+                resourceLog("contacts-log", "Create Contact", result.data);
+            } catch (error) { resourceLog("contacts-log", error.message); }
+        }
+
+        async function updateContact() {
+            const id = value("contact-id");
+            if (!id) return alert("Contact ID wajib diisi");
+            try {
+                const result = await apiRequest(`/contacts/${id}`, { method: "PATCH", body: contactPayload() });
+                resourceLog("contacts-log", "Update Contact", result.data);
+            } catch (error) { resourceLog("contacts-log", error.message); }
+        }
+
+        async function deleteContact() {
+            const id = value("contact-id");
+            if (!id || !confirm("Hapus contact ini?")) return;
+            try {
+                const result = await apiRequest(`/contacts/${id}`, { method: "DELETE" });
+                resourceLog("contacts-log", "Delete Contact", result.data);
+            } catch (error) { resourceLog("contacts-log", error.message); }
+        }
+
+        async function listSites() {
+            try {
+                const result = await apiRequest("/sites");
+                resourceLog("sites-log", "List Sites", result.data);
+            } catch (error) { resourceLog("sites-log", error.message); }
+        }
+
+        function sitePayload() {
+            return { name: value("site-name"), address: value("site-address") || null };
+        }
+
+        async function createSite() {
+            try {
+                const result = await apiRequest("/sites", { method: "POST", body: sitePayload() });
+                resourceLog("sites-log", "Create Site", result.data);
+            } catch (error) { resourceLog("sites-log", error.message); }
+        }
+
+        async function updateSite() {
+            const uuid = value("site-uuid");
+            if (!uuid) return alert("Site UUID wajib diisi");
+            try {
+                const result = await apiRequest(`/sites/${uuid}`, { method: "PATCH", body: sitePayload() });
+                resourceLog("sites-log", "Update Site", result.data);
+            } catch (error) { resourceLog("sites-log", error.message); }
+        }
+
+        function pointsQuery() {
+            const params = new URLSearchParams();
+            const userID = optionalInt("points-user-id");
+            const siteID = optionalInt("points-site-id");
+            if (userID !== undefined) params.set("userId", userID);
+            if (siteID !== undefined) params.set("siteId", siteID);
+            params.set("limit", "20");
+            return params.toString();
+        }
+
+        async function getPoints() {
+            try {
+                const result = await apiRequest(`/points?${pointsQuery()}`);
+                resourceLog("points-log", "Get Points", result.data);
+            } catch (error) { resourceLog("points-log", error.message); }
+        }
+
+        function pointsPayload() {
+            return {
+                amount: Number(value("points-amount")),
+                reason: value("points-reason"),
+                reference_id: value("points-reference") || null
+            };
+        }
+
+        async function earnPoints() {
+            try {
+                const result = await apiRequest("/points/earn", { method: "POST", body: pointsPayload() });
+                resourceLog("points-log", "Earn Points", result.data);
+            } catch (error) { resourceLog("points-log", error.message); }
+        }
+
+        async function spendPoints() {
+            try {
+                const result = await apiRequest("/points/spend", { method: "POST", body: pointsPayload() });
+                resourceLog("points-log", "Spend Points", result.data);
+            } catch (error) { resourceLog("points-log", error.message); }
+        }
+
+        function newsPayload() {
+            return {
+                title: value("news-title"),
+                slug: value("news-slug"),
+                excerpt: value("news-excerpt") || null,
+                content: value("news-content"),
+                author_id: optionalInt("news-author-id") ?? null,
+                site_id: optionalInt("news-site-id") ?? null,
+                status: value("news-status"),
+                is_featured: false,
+                meta: null,
+                published_at: null
+            };
+        }
+
+        async function listNews() {
+            const params = new URLSearchParams();
+            if (value("news-search")) params.set("search", value("news-search"));
+            const siteID = optionalInt("news-site-id");
+            if (siteID !== undefined) params.set("site_id", siteID);
+            params.set("limit", "20");
+            try {
+                const result = await apiRequest(`/news?${params.toString()}`);
+                resourceLog("news-log", "List News", result.data);
+            } catch (error) { resourceLog("news-log", error.message); }
+        }
+
+        async function createNews() {
+            try {
+                const result = await apiRequest("/news", { method: "POST", body: newsPayload() });
+                resourceLog("news-log", "Create News", result.data);
+            } catch (error) { resourceLog("news-log", error.message); }
+        }
+
+        async function updateNews() {
+            const uuid = value("news-uuid");
+            if (!uuid) return alert("News UUID wajib diisi");
+            try {
+                const result = await apiRequest(`/news/${uuid}`, { method: "PATCH", body: newsPayload() });
+                resourceLog("news-log", "Update News", result.data);
+            } catch (error) { resourceLog("news-log", error.message); }
+        }
+
+        async function deleteNews() {
+            const uuid = value("news-uuid");
+            if (!uuid || !confirm("Hapus news ini?")) return;
+            try {
+                const result = await apiRequest(`/news/${uuid}`, { method: "DELETE" });
+                resourceLog("news-log", "Delete News", result.data);
+            } catch (error) { resourceLog("news-log", error.message); }
+        }
+
+        function toggleActivitySchedule() {
+            const recurring = value("activity-type") === "recurring";
+            document.getElementById("activity-schedule-fields").style.display = recurring ? "block" : "none";
+            document.getElementById("activity-occurrence-fields").style.display = recurring ? "none" : "block";
+        }
+
+        function activityPayload() {
+            const recurring = value("activity-type") === "recurring";
+            const payload = {
+                title: value("activity-title"),
+                description: value("activity-description") || null,
+                category_id: Number(value("activity-category-id")),
+                activity_type: value("activity-type"),
+                site_id: optionalInt("activity-site-id") ?? null,
+                status: value("activity-status"),
+                max_participants: optionalInt("activity-max-participants") ?? null,
+                requires_registration: document.getElementById("activity-registration").checked,
+                streak_enabled: document.getElementById("activity-streak-enabled").checked,
+                streak_type: value("activity-streak-type") || null,
+                streak_points: Number(value("activity-streak-points") || 0)
+            };
+            if (recurring) {
+                payload.schedule = {
+                    frequency: value("activity-frequency"),
+                    interval_value: 1,
+                    days_of_week: value("activity-days") ? value("activity-days").split(",").map(Number) : [],
+                    start_date: value("activity-start-date"),
+                    start_time: value("activity-start-time") || null,
+                    end_time: value("activity-end-time") || null,
+                    timezone: "Asia/Jakarta"
+                };
+            } else {
+                const startsAt = value("activity-starts-at");
+                payload.occurrence = {
+                    starts_at: startsAt ? new Date(startsAt).toISOString() : "",
+                    ends_at: value("activity-ends-at") ? new Date(value("activity-ends-at")).toISOString() : null,
+                    location: value("activity-location") || null,
+                    status: "scheduled",
+                    notes: null
+                };
+            }
+            return payload;
+        }
+
+        async function listActivities() {
+            try {
+                const search = value("activity-search");
+                const query = search ? `?search=${encodeURIComponent(search)}&limit=50` : "?limit=50";
+                const result = await apiRequest(`/activities${query}`);
+                resourceLog("activities-log", "List Activities", result.data);
+            } catch (error) { resourceLog("activities-log", error.message); }
+        }
+
+        async function createActivity() {
+            try {
+                const result = await apiRequest("/admin/activities", { method: "POST", body: activityPayload() });
+                resourceLog("activities-log", "Create Activity", result.data);
+                listActivities();
+            } catch (error) { resourceLog("activities-log", error.message); }
+        }
+
+        async function updateActivity() {
+            const uuid = value("activity-uuid");
+            if (!uuid) return alert("Activity UUID wajib diisi");
+            try {
+                const result = await apiRequest(`/admin/activities/${uuid}`, { method: "PATCH", body: activityPayload() });
+                resourceLog("activities-log", "Update Activity", result.data);
+                listActivities();
+            } catch (error) { resourceLog("activities-log", error.message); }
+        }
+
+        async function deleteActivity() {
+            const uuid = value("activity-uuid");
+            if (!uuid || !confirm("Hapus activity ini?")) return;
+            try {
+                const result = await apiRequest(`/admin/activities/${uuid}`, { method: "DELETE" });
+                resourceLog("activities-log", "Delete Activity", result.data);
+                listActivities();
+            } catch (error) { resourceLog("activities-log", error.message); }
+        }
+
+        function toggleActivityStreak() {
+            const enabled = document.getElementById("activity-streak-enabled").checked;
+            document.getElementById("activity-streak-fields").style.display = enabled ? "block" : "none";
+        }
+
+        async function checkInStreak() {
+            const uuid = value("activity-uuid");
+            if (!uuid) return alert("Activity UUID wajib diisi");
+            try {
+                const result = await apiRequest("/streaks/check-in", {
+                    method: "POST",
+                    body: { activity_uuid: uuid }
+                });
+                resourceLog("activities-log", "Streak Check-in", result.data);
+            } catch (error) { resourceLog("activities-log", error.message); }
+        }
+
+        async function listMyStreaks() {
+            try {
+                const result = await apiRequest("/streaks");
+                resourceLog("activities-log", "My Streaks", result.data);
+            } catch (error) { resourceLog("activities-log", error.message); }
         }
 
         // Logout Modal Functions
