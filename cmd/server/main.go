@@ -4,9 +4,7 @@ import (
 	"log"
 	"os"
 
-	"christ-api/internal/auth"
 	"christ-api/internal/middleware"
-	"christ-api/internal/role"
 	"christ-api/pkg/database"
 	"christ-api/routes"
 
@@ -16,7 +14,7 @@ import (
 )
 
 func main() {
-	// load env dulu
+	// load env
 	if err := godotenv.Load(".env.local"); err != nil {
 		if err := godotenv.Load(".env"); err != nil {
 			log.Println("ℹ️ .env.local/.env tidak ditemukan, pakai environment variables")
@@ -24,22 +22,29 @@ func main() {
 	}
 
 	if os.Getenv("JWT_SECRET") == "" {
-		log.Fatal("❌ JWT_SECRET wajib diisi")
+		log.Fatal("JWT_SECRET wajib diisi")
 	}
 
 	// connect database
 	database.Connect()
 
-	// initialize services that need DB
-	auth.InitService(&auth.AuthRepository{DB: database.DB})
-	role.InitService(&role.RoleRepository{DB: database.DB})
-
 	app := fiber.New()
-	app.Use(cors.New())
+
+	// CORS with restricted origins
+	corsOrigins := os.Getenv("CORS_ORIGINS")
+	if corsOrigins == "" {
+		corsOrigins = "http://localhost:3000,http://localhost:3001"
+	}
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: corsOrigins,
+	}))
+
 	app.Use(middleware.CustomLogger)
+	app.Use(middleware.RateLimiter)
 
 	// Serve static files from docs directory
 	app.Static("/docs", "./docs")
+	app.Static("/uploads", "./uploads")
 
 	routes.Setup(app)
 

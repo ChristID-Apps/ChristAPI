@@ -1,11 +1,14 @@
 package contacts
 
 import (
-	"christ-api/pkg/database"
 	"database/sql"
+	"fmt"
+	"strings"
 )
 
-type ContactRepository struct{}
+type ContactRepository struct {
+	DB *sql.DB
+}
 
 const contactSelectColumns = `
 	c.id,
@@ -65,7 +68,7 @@ func scanContactRow(row interface{ Scan(dest ...any) error }) (*Contact, error) 
 }
 
 func (r *ContactRepository) List(page, limit int) ([]Contact, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
 	if page < 1 {
@@ -75,7 +78,7 @@ func (r *ContactRepository) List(page, limit int) ([]Contact, error) {
 		limit = 10
 	}
 	offset := (page - 1) * limit
-	rows, err := database.DB.Query(`
+	rows, err := r.DB.Query(`
 		SELECT `+contactSelectColumns+`
 		FROM contacts c
 		LEFT JOIN users u ON u.contact_id = c.id
@@ -101,10 +104,10 @@ func (r *ContactRepository) List(page, limit int) ([]Contact, error) {
 }
 
 func (r *ContactRepository) GetByID(id int64) (*Contact, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
-	row := database.DB.QueryRow(`
+	row := r.DB.QueryRow(`
 		SELECT `+contactSelectColumns+`
 		FROM contacts c
 		LEFT JOIN users u ON u.contact_id = c.id
@@ -114,7 +117,7 @@ func (r *ContactRepository) GetByID(id int64) (*Contact, error) {
 }
 
 func (r *ContactRepository) Create(fullName string, phone *string, address *string, siteID *int64) (*Contact, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
 	query := `
@@ -136,7 +139,7 @@ func (r *ContactRepository) Create(fullName string, phone *string, address *stri
 			i.deleted_at
 		FROM inserted i
 		LEFT JOIN users u ON u.contact_id = i.id`
-	row := database.DB.QueryRow(query, fullName, phone, address, siteID)
+	row := r.DB.QueryRow(query, fullName, phone, address, siteID)
 	c, err := scanContactRow(row)
 	if err != nil {
 		return nil, err
@@ -144,15 +147,37 @@ func (r *ContactRepository) Create(fullName string, phone *string, address *stri
 	return c, nil
 }
 
-func (r *ContactRepository) Update(id int64, fullName string, phone *string, address *string, siteID *int64) (*Contact, error) {
-	if database.DB == nil {
+func (r *ContactRepository) Update(id int64, req *UpdateContactRequest) (*Contact, error) {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
+	columns := []string{}
+	args := []interface{}{}
+	add := func(name string, value interface{}) {
+		columns = append(columns, name+fmt.Sprintf("=$%d", len(args)+1))
+		args = append(args, value)
+	}
+	if req.Present["full_name"] {
+		add("full_name", req.FullName)
+	}
+	if req.Present["phone"] {
+		add("phone", req.Phone)
+	}
+	if req.Present["address"] {
+		add("address", req.Address)
+	}
+	if req.Present["site_id"] {
+		add("site_id", req.SiteID)
+	}
+	if len(columns) == 0 {
+		columns = append(columns, "updated_at=NOW()")
+	}
+	args = append(args, id)
 	query := `
 		WITH updated AS (
 			UPDATE contacts
-			SET full_name=$1, phone=$2, address=$3, site_id=$4, updated_at=NOW()
-			WHERE id=$5 AND deleted_at IS NULL
+			SET ` + strings.Join(columns, ", ") + `, updated_at=NOW()
+			WHERE id=$` + fmt.Sprint(len(args)) + ` AND deleted_at IS NULL
 			RETURNING id, full_name, phone, address, created_at, updated_at, site_id, deleted_at
 		)
 		SELECT
@@ -168,7 +193,7 @@ func (r *ContactRepository) Update(id int64, fullName string, phone *string, add
 			upt.deleted_at
 		FROM updated upt
 		LEFT JOIN users u ON u.contact_id = upt.id`
-	row := database.DB.QueryRow(query, fullName, phone, address, siteID, id)
+	row := r.DB.QueryRow(query, args...)
 	c, err := scanContactRow(row)
 	if err != nil {
 		return nil, err
@@ -177,7 +202,7 @@ func (r *ContactRepository) Update(id int64, fullName string, phone *string, add
 }
 
 func (r *ContactRepository) SoftDelete(id int64) (*Contact, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
 	query := `
@@ -200,7 +225,7 @@ func (r *ContactRepository) SoftDelete(id int64) (*Contact, error) {
 			d.deleted_at
 		FROM deleted d
 		LEFT JOIN users u ON u.contact_id = d.id`
-	row := database.DB.QueryRow(query, id)
+	row := r.DB.QueryRow(query, id)
 	c, err := scanContactRow(row)
 	if err != nil {
 		return nil, err

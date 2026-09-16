@@ -1,19 +1,22 @@
 package news
 
 import (
-	"christ-api/pkg/database"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strings"
 )
 
-type NewsRepository struct{}
+type NewsRepository struct {
+	DB *sql.DB
+}
 
 func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
 
-	query := `SELECT n.id, n.uuid, n.title, n.slug, n.excerpt, n.content, n.author_id, n.site_id, n.status, n.is_featured, n.meta, n.published_at, n.views, n.created_at, n.updated_at, n.deleted_at, c.full_name AS author_name FROM news n LEFT JOIN users u ON n.author_id = u.id LEFT JOIN contacts c ON u.contact_id = c.id WHERE n.deleted_at IS NULL`
+	query := `SELECT n.id, n.uuid, n.title, n.slug, n.image_url, n.excerpt, n.content, n.author_id, n.site_id, n.status, n.is_featured, n.meta, n.published_at, n.views, n.created_at, n.updated_at, n.deleted_at, c.full_name AS author_name FROM news n LEFT JOIN users u ON n.author_id = u.id LEFT JOIN contacts c ON u.contact_id = c.id WHERE n.deleted_at IS NULL`
 	args := []interface{}{}
 	idx := 1
 
@@ -40,7 +43,7 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 	query += ` ORDER BY n.published_at DESC NULLS LAST, n.created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
 	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := database.DB.Query(query, args...)
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,6 +54,7 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 		var n News
 		var meta sql.NullString
 		var excerpt sql.NullString
+		var imageURL sql.NullString
 		var authorID sql.NullInt64
 		var siteID sql.NullInt64
 		var publishedAt sql.NullTime
@@ -59,12 +63,15 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 		var deletedAt sql.NullTime
 		var authorName sql.NullString
 
-		err := rows.Scan(&n.ID, &n.UUID, &n.Title, &n.Slug, &excerpt, &n.Content, &authorID, &siteID, &n.Status, &n.IsFeatured, &meta, &publishedAt, &n.Views, &createdAt, &updatedAt, &deletedAt, &authorName)
+		err := rows.Scan(&n.ID, &n.UUID, &n.Title, &n.Slug, &imageURL, &excerpt, &n.Content, &authorID, &siteID, &n.Status, &n.IsFeatured, &meta, &publishedAt, &n.Views, &createdAt, &updatedAt, &deletedAt, &authorName)
 		if err != nil {
 			return nil, err
 		}
 		if excerpt.Valid {
 			n.Excerpt = &excerpt.String
+		}
+		if imageURL.Valid {
+			n.ImageURL = &imageURL.String
 		}
 		if authorID.Valid {
 			v := authorID.Int64
@@ -111,10 +118,10 @@ func (r *NewsRepository) FindByID(id int64) (*News, error) {
 }
 
 func (r *NewsRepository) Create(n *News) (*News, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
-	query := `INSERT INTO news (title, slug, excerpt, content, author_id, site_id, status, is_featured, meta, published_at, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NOW(),NOW()) RETURNING id, uuid, title, slug, excerpt, content, author_id, site_id, status, is_featured, meta, published_at, views, created_at, updated_at, deleted_at`
+	query := `INSERT INTO news (title, slug, image_url, excerpt, content, author_id, site_id, status, is_featured, meta, published_at, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW()) RETURNING id, uuid, title, slug, image_url, excerpt, content, author_id, site_id, status, is_featured, meta, published_at, views, created_at, updated_at, deleted_at`
 
 	var metaStr interface{}
 	if n.Meta != nil {
@@ -129,6 +136,7 @@ func (r *NewsRepository) Create(n *News) (*News, error) {
 	var created News
 	var metaN sql.NullString
 	var excerpt sql.NullString
+	var imageURL sql.NullString
 	var authorID sql.NullInt64
 	var siteID sql.NullInt64
 	var publishedAt sql.NullTime
@@ -146,13 +154,16 @@ func (r *NewsRepository) Create(n *News) (*News, error) {
 		siteID = sql.NullInt64{Int64: *n.SiteID, Valid: true}
 	}
 
-	err := database.DB.QueryRow(query, n.Title, n.Slug, excerpt, n.Content, authorID, siteID, n.Status, n.IsFeatured, metaStr, n.PublishedAt).Scan(&created.ID, &created.UUID, &created.Title, &created.Slug, &excerpt, &created.Content, &authorID, &siteID, &created.Status, &created.IsFeatured, &metaN, &publishedAt, &created.Views, &createdAt, &updatedAt, &deletedAt)
+	err := r.DB.QueryRow(query, n.Title, n.Slug, n.ImageURL, excerpt, n.Content, authorID, siteID, n.Status, n.IsFeatured, metaStr, n.PublishedAt).Scan(&created.ID, &created.UUID, &created.Title, &created.Slug, &imageURL, &excerpt, &created.Content, &authorID, &siteID, &created.Status, &created.IsFeatured, &metaN, &publishedAt, &created.Views, &createdAt, &updatedAt, &deletedAt)
 	if err != nil {
 		return nil, err
 	}
 
 	if metaN.Valid {
 		created.Meta = []byte(metaN.String)
+	}
+	if imageURL.Valid {
+		created.ImageURL = &imageURL.String
 	}
 	if excerpt.Valid {
 		created.Excerpt = &excerpt.String
@@ -180,7 +191,7 @@ func (r *NewsRepository) Create(n *News) (*News, error) {
 
 	if created.AuthorID != nil {
 		var authorName sql.NullString
-		row := database.DB.QueryRow(`SELECT c.full_name FROM users u LEFT JOIN contacts c ON u.contact_id = c.id WHERE u.id = $1 LIMIT 1`, *created.AuthorID)
+		row := r.DB.QueryRow(`SELECT c.full_name FROM users u LEFT JOIN contacts c ON u.contact_id = c.id WHERE u.id = $1 LIMIT 1`, *created.AuthorID)
 		if err := row.Scan(&authorName); err == nil {
 			if authorName.Valid {
 				an := authorName.String
@@ -191,36 +202,82 @@ func (r *NewsRepository) Create(n *News) (*News, error) {
 	return &created, nil
 }
 
-func (r *NewsRepository) Update(n *News) error {
-	if database.DB == nil {
+func (r *NewsRepository) Update(uuid string, n *NewsUpdateRequest) error {
+	if r == nil || r.DB == nil {
 		return sql.ErrConnDone
 	}
-	query := `UPDATE news SET title=$1, slug=$2, excerpt=$3, content=$4, author_id=$5, site_id=$6, status=$7, is_featured=$8, meta=$9, published_at=$10, updated_at=NOW() WHERE uuid = $11`
-
-	var excerpt sql.NullString
-	var authorID sql.NullInt64
-	var siteID sql.NullInt64
-
-	if n.Excerpt != nil {
-		excerpt = sql.NullString{String: *n.Excerpt, Valid: true}
+	columns := []string{}
+	args := []interface{}{}
+	add := func(name string, value interface{}) {
+		columns = append(columns, name+fmt.Sprintf("=$%d", len(args)+1))
+		args = append(args, value)
 	}
-	if n.AuthorID != nil {
-		authorID = sql.NullInt64{Int64: *n.AuthorID, Valid: true}
+	if n.Present["title"] {
+		add("title", n.Title)
 	}
-	if n.SiteID != nil {
-		siteID = sql.NullInt64{Int64: *n.SiteID, Valid: true}
+	if n.Present["slug"] {
+		add("slug", n.Slug)
 	}
-
-	_, err := database.DB.Exec(query, n.Title, n.Slug, excerpt, n.Content, authorID, siteID, n.Status, n.IsFeatured, n.Meta, n.PublishedAt, n.UUID)
+	if n.Present["image_url"] {
+		add("image_url", n.ImageURL)
+	}
+	if n.Present["excerpt"] {
+		add("excerpt", n.Excerpt)
+	}
+	if n.Present["content"] {
+		add("content", n.Content)
+	}
+	if n.Present["author_id"] {
+		add("author_id", n.AuthorID)
+	}
+	if n.Present["site_id"] {
+		add("site_id", n.SiteID)
+	}
+	if n.Present["status"] {
+		add("status", n.Status)
+	}
+	if n.Present["is_featured"] {
+		add("is_featured", n.IsFeatured)
+	}
+	if n.Present["meta"] {
+		add("meta", n.Meta)
+	}
+	if n.Present["published_at"] {
+		add("published_at", n.PublishedAt)
+	}
+	if len(columns) == 0 {
+		columns = append(columns, "uuid=uuid")
+	}
+	args = append(args, uuid)
+	query := `UPDATE news SET ` + strings.Join(columns, ", ") + `, updated_at=NOW() WHERE uuid = $` + fmt.Sprint(len(args))
+	_, err := r.DB.Exec(query, args...)
 	return err
 }
 
+func (r *NewsRepository) UpdateImage(uuid, imageURL string) error {
+	if r == nil || r.DB == nil {
+		return sql.ErrConnDone
+	}
+	result, err := r.DB.Exec(`UPDATE news SET image_url=$1, updated_at=NOW() WHERE uuid=$2 AND deleted_at IS NULL`, imageURL, uuid)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (r *NewsRepository) SoftDelete(uuid string) error {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return sql.ErrConnDone
 	}
 	query := `UPDATE news SET deleted_at = NOW() WHERE uuid = $1`
-	_, err := database.DB.Exec(query, uuid)
+	_, err := r.DB.Exec(query, uuid)
 	return err
 }
 

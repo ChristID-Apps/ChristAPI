@@ -7,6 +7,6 @@ type RegisterRequest struct {
 	ContactSiteID *int64  `json:"contact_site_id"`
 	Email         string  `json:"email"`
 	Password      string  `json:"password"`
-	RoleID        *int64  `json:"role_id"`
+	RoleID        *int64  `json:"role_id,omitempty"`
 	SiteID        *int64  `json:"site_id"`
 }

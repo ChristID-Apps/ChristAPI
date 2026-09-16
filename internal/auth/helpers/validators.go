@@ -3,7 +3,14 @@ package helpers
 import (
 	"christ-api/internal/auth/dto/requests"
 	"errors"
+	"strings"
 )
+
+type ValidationError struct {
+	Fields map[string][]string
+}
+
+func (e *ValidationError) Error() string { return "validation failed" }
 
 // ValidateLoginRequest validates login request
 func ValidateLoginRequest(req *requests.LoginRequest) error {
@@ -20,18 +27,21 @@ func ValidateLoginRequest(req *requests.LoginRequest) error {
 func ValidateRegisterRequest(req *requests.RegisterRequest) error {
 	errs := make(map[string][]string)
 
-	if req.FullName == "" {
+	if strings.TrimSpace(req.FullName) == "" {
 		errs["full_name"] = append(errs["full_name"], "Full name is required")
 	}
-	if req.Email == "" {
+	if strings.TrimSpace(req.Email) == "" {
 		errs["email"] = append(errs["email"], "Email is required")
 	}
 	if req.Password == "" {
 		errs["password"] = append(errs["password"], "Password is required")
 	}
+	if len(req.Password) > 0 && len(req.Password) < 8 {
+		errs["password"] = append(errs["password"], "Password must be at least 8 characters")
+	}
 
 	if len(errs) > 0 {
-		return errors.New("validation failed")
+		return &ValidationError{Fields: errs}
 	}
 
 	return nil
@@ -58,8 +68,8 @@ func ValidateGoogleLoginRequest(req *requests.GoogleLoginRequest) error {
 
 // ValidateSubmitGoogleUsername validates submit username request
 func ValidateSubmitGoogleUsername(req *requests.SubmitGoogleUsernameRequest) error {
-	if req.UserID == 0 {
-		return errors.New("user_id is required")
+	if req.IDToken == "" {
+		return errors.New("id_token is required")
 	}
 	if req.Username == "" {
 		return errors.New("username is required")

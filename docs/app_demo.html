@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChristAPI App</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        :root {
+            --blue: #2563eb;
+            --blue-dark: #1d4ed8;
+            --ink: #172033;
+            --muted: #667085;
+            --line: #e5e7eb;
+            --surface: #ffffff;
+            --soft: #f5f7fb;
+            --green: #168a55;
+            --red: #c0392b;
+            --orange: #c46a14;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--soft);
+            color: var(--ink);
+            font: 14px/1.5 Arial, sans-serif;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font: inherit;
+        }
+
+        button {
+            border: 0;
+            border-radius: 6px;
+            background: var(--blue);
+            color: white;
+            cursor: pointer;
+            padding: 10px 14px;
+        }
+
+        button:hover {
+            background: var(--blue-dark);
+        }
+
+        button.secondary {
+            background: #eef2f7;
+            color: var(--ink);
+        }
+
+        button.danger {
+            background: var(--red);
+        }
+
+        button.warning {
+            background: var(--orange);
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: .6;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            border: 1px solid #d7dce5;
+            border-radius: 6px;
+            padding: 10px;
+            background: white;
+        }
+
+        textarea {
+            min-height: 84px;
+            resize: vertical;
+        }
+
+        label {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .auth-shell {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .auth-card {
+            width: min(440px, 100%);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 12px 30px #17203312;
+        }
+
+        .brand {
+            color: var(--blue);
+            font-weight: 800;
+            letter-spacing: .3px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin: 0 0 8px;
+        }
+
+        h1 {
+            font-size: 26px;
+        }
+
+        h2 {
+            font-size: 20px;
+        }
+
+        h3 {
+            font-size: 16px;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .form-row {
+            display: grid;
+            gap: 13px;
+            margin: 20px 0;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .auth-switch {
+            margin-top: 20px;
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .link {
+            color: var(--blue);
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .app-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 230px 1fr;
+        }
+
+        .sidebar {
+            background: #111827;
+            color: white;
+            padding: 22px 14px;
+        }
+
+        .sidebar .brand {
+            display: block;
+            padding: 0 10px 24px;
+            color: #93c5fd;
+        }
+
+        .nav {
+            display: grid;
+            gap: 5px;
+        }
+
+        .nav button {
+            background: transparent;
+            text-align: left;
+            color: #cbd5e1;
+            width: 100%;
+        }
+
+        .nav button:hover,
+        .nav button.active {
+            background: #26354f;
+            color: white;
+        }
+
+        .sidebar-bottom {
+            margin-top: 30px;
+            border-top: 1px solid #334155;
+            padding-top: 16px;
+        }
+
+        .main {
+            min-width: 0;
+        }
+
+        .topbar {
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 16px 28px;
+            background: white;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .user-chip {
+            color: var(--muted);
+            text-align: right;
+        }
+
+        .role-label {
+            display: inline-block;
+            margin-top: 3px;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .content {
+            padding: 28px;
+            max-width: 1400px;
+        }
+
+        .page-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .grid-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .card {
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .metric {
+            font-size: 28px;
+            font-weight: 800;
+            margin-top: 6px;
+        }
+
+        .metric-label {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background: white;
+        }
+
+        th,
+        td {
+            border-bottom: 1px solid var(--line);
+            padding: 11px 10px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        th {
+            color: var(--muted);
+            font-size: 12px;
+            background: #fafbfc;
+        }
+
+        .badge {
+            display: inline-block;
+            border-radius: 99px;
+            padding: 3px 8px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge.green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge.orange {
+            background: #ffedd5;
+            color: #9a3412;
+        }
+
+        .notice {
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+            background: #eff6ff;
+            color: #1e40af;
+        }
+
+        .notice.error {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        .notice.success {
+            background: #f0fdf4;
+            color: #166534;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .toolbar>div {
+            min-width: 150px;
+            flex: 1;
+        }
+
+        .json {
+            background: #111827;
+            color: #d1fae5;
+            border-radius: 6px;
+            padding: 12px;
+            white-space: pre-wrap;
+            overflow: auto;
+            min-height: 100px;
+            font: 12px monospace;
+        }
+
+        .actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 900px) {
+            .app-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                padding: 12px;
+            }
+
+            .sidebar .brand {
+                padding-bottom: 12px;
+            }
+
+            .nav {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .sidebar-bottom {
+                margin-top: 12px;
+                padding-top: 12px;
+            }
+
+            .grid-4 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+
+            .content,
+            .topbar {
+                padding: 18px;
+            }
+
+            .grid-2,
+            .grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .nav {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .page-head {
+                display: block;
+            }
+
+            .user-chip {
+                text-align: left;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+    <script>
+        const API_URL = "http://localhost:3000/api";
+        const API_ORIGIN = API_URL.replace(/\/api$/, "");
+        let token = localStorage.getItem("jwt_token") || "";
+        let user = JSON.parse(localStorage.getItem("auth_user") || "null");
+        let currentPage = "dashboard";
+        const root = document.getElementById("root");
+
+        function esc(value) {
+            return String(value ?? "").replace(/[&<>\"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+        }
+        function setSession(nextToken, nextUser) {
+            token = nextToken; user = nextUser || null;
+            localStorage.setItem("jwt_token", token);
+            localStorage.setItem("auth_user", JSON.stringify(user));
+            renderApp();
+        }
+        function clearSession() {
+            token = ""; user = null;
+            localStorage.removeItem("jwt_token"); localStorage.removeItem("auth_user");
+            renderLogin();
+        }
+        async function api(path, options = {}) {
+            const headers = { ...(options.body === undefined ? {} : { "Content-Type": "application/json" }) };
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(`${response.status}: ${data.message || "Request gagal"}`);
+            return data;
+        }
+        function field(id) { return document.getElementById(id)?.value.trim() || ""; }
+        function optionalInt(id) { const value = field(id); return value === "" ? null : Number(value); }
+        function mediaURL(path) { return path ? (path.startsWith("http") ? path : `${API_ORIGIN}${path}`) : ""; }
+        function isAdmin() {
+            const role = String(user?.role || "").trim().toLowerCase().replace(/[-\s]/g, "_");
+            return ["admin", "super_admin"].includes(role);
+        }
+        function pageHead(title, subtitle, action = "") { return `<div class="page-head"><div><h1>${title}</h1><div class="muted">${subtitle}</div></div>${action}</div>`; }
+        function showNotice(message, type = "success") { const el = document.getElementById("page-notice"); if (el) { el.className = `notice ${type}`; el.textContent = message; el.classList.remove("hidden"); } }
+        function hideNotice() { document.getElementById("page-notice")?.classList.add("hidden"); }
+
+        function renderLogin() {
+            root.innerHTML = `<div class="auth-shell"><div class="auth-card">
+        <div class="brand">ChristAPI</div><h1>Masuk ke aplikasi</h1><p class="muted">Gunakan credentials atau Google.</p>
+        <div id="auth-notice" class="notice error hidden"></div>
+        <form id="login-form" class="form-row">
+            <div><label>Email</label><input id="login-email" type="email" required></div>
+            <div><label>Password</label><input id="login-password" type="password" required></div>
+            <button type="submit">Masuk dengan credentials</button>
+        </form>
+        <div class="auth-switch">atau masuk dengan Google</div>
+        <div id="google-login-button"></div>
+        <div class="auth-switch">Belum punya akun? <span class="link" onclick="renderRegister()">Daftar sekarang</span></div>
+    </div></div>`;
+            document.getElementById("login-form").onsubmit = async event => {
+                event.preventDefault(); const notice = document.getElementById("auth-notice");
+                try { const result = await api("/login", { method: "POST", body: JSON.stringify({ email: field("login-email"), password: field("login-password") }) }); setSession(result.data.token, result.data.user); }
+                catch (error) { notice.textContent = error.message; notice.classList.remove("hidden"); }
+            };
+            initializeGoogleButton("google-login-button");
+        }
+
+        function handleGoogleResponse(response) {
+            if (response?.credential) submitGoogleLogin(response.credential);
+        }
+
+        function initializeGoogleButton(containerID) {
+            if (window.google?.accounts?.id) {
+                google.accounts.id.initialize({ client_id: "19085886514-lgfr9ce97us82dvoa7qdfp4go6ejlavt.apps.googleusercontent.com", callback: handleGoogleResponse });
+                google.accounts.id.renderButton(document.getElementById(containerID), { theme: "outline", size: "large", width: 360 });
+                return;
+            }
+            setTimeout(() => initializeGoogleButton(containerID), 300);
+        }
+
+        async function submitGoogleLogin(idToken) {
+            const notice = document.getElementById("auth-notice");
+            try {
+                const result = await api("/auth/google", { method: "POST", body: JSON.stringify({ id_token: idToken }) });
+                if (result.data?.token) return setSession(result.data.token, result.data.user);
+                if (result.data?.status === "pending_username") return renderGoogleUsername(idToken);
+                notice.textContent = "Akun Google belum disetujui admin."; notice.classList.remove("hidden");
+            } catch (error) { notice.textContent = error.message; notice.classList.remove("hidden"); }
+        }
+
+        function renderGoogleUsername(idToken) {
+            root.innerHTML = `<div class="auth-shell"><div class="auth-card"><div class="brand">ChristAPI</div><h1>Selesaikan registrasi Google</h1><p class="muted">Lengkapi profil sebelum approval admin.</p><div id="auth-notice" class="notice hidden"></div>
+        <form id="google-profile-form" class="form-row"><div><label>Username</label><input id="google-username" required></div><div><label>Nama lengkap</label><input id="google-full-name" required></div><div><label>Nomor telepon</label><input id="google-phone"></div><div><label>Alamat</label><textarea id="google-address"></textarea></div><button type="submit">Simpan profil Google</button></form></div></div>`;
+            document.getElementById("google-profile-form").onsubmit = async event => {
+                event.preventDefault(); const notice = document.getElementById("auth-notice");
+                try { await api("/auth/google/username", { method: "POST", body: JSON.stringify({ id_token: idToken, username: field("google-username"), full_name: field("google-full-name"), phone: field("google-phone") || null, address: field("google-address") || null }) }); notice.className = "notice success"; notice.textContent = "Profil tersimpan. Tunggu approval admin."; }
+                catch (error) { notice.className = "notice error"; notice.textContent = error.message; }
+                notice.classList.remove("hidden");
+            };
+        }
+
+        function renderRegister() {
+            root.innerHTML = `<div class="auth-shell"><div class="auth-card"><div class="brand">ChristAPI</div><h1>Buat akun</h1><p class="muted">Daftar dengan credentials atau Google.</p><div id="auth-notice" class="notice hidden"></div>
+        <form id="register-form" class="form-row"><div><label>Nama lengkap</label><input id="reg-name" required></div><div><label>Email</label><input id="reg-email" type="email" required></div><div><label>Password</label><input id="reg-password" type="password" required></div><div><label>Nomor telepon</label><input id="reg-phone"></div><div><label>Alamat</label><textarea id="reg-address"></textarea></div><button type="submit">Daftar credentials</button></form>
+        <div class="auth-switch">Verifikasi OTP dari email</div><form id="otp-form" class="form-row"><div><label>Email registrasi</label><input id="otp-email" type="email" required></div><div><label>OTP</label><input id="otp-code" inputmode="numeric" autocomplete="one-time-code" required></div><button type="submit" class="secondary">Verifikasi OTP</button></form>
+        <div class="auth-switch">atau daftar dengan Google</div><div id="google-register-button"></div>
+        <div class="auth-switch">Sudah punya akun? <span class="link" onclick="renderLogin()">Kembali ke login</span></div></div></div>`;
+            document.getElementById("register-form").onsubmit = async event => {
+                event.preventDefault(); const notice = document.getElementById("auth-notice");
+                try { await api("/register", { method: "POST", body: JSON.stringify({ full_name: field("reg-name"), email: field("reg-email"), password: field("reg-password"), phone: field("reg-phone") || null, address: field("reg-address") || null }) }); notice.className = "notice success"; notice.textContent = "Pendaftaran berhasil. Cek email untuk OTP."; }
+                catch (error) { notice.className = "notice error"; notice.textContent = error.message; }
+                notice.classList.remove("hidden");
+            };
+            document.getElementById("otp-form").onsubmit = async event => {
+                event.preventDefault(); const notice = document.getElementById("auth-notice");
+                try { await api("/verify-otp", { method: "POST", body: JSON.stringify({ email: field("otp-email"), otp_code: field("otp-code") }) }); notice.className = "notice success"; notice.textContent = "OTP berhasil diverifikasi. Tunggu approval admin."; }
+                catch (error) { notice.className = "notice error"; notice.textContent = error.message; }
+                notice.classList.remove("hidden");
+            };
+            initializeGoogleButton("google-register-button");
+        }
+        function renderApp() {
+            if (!token) return renderLogin();
+            const admin = isAdmin();
+            root.innerHTML = `<div class="app-shell">
+        <aside class="sidebar"><span class="brand">ChristAPI</span><nav class="nav">
+            <button data-page="dashboard">Dashboard</button><button data-page="activities">Activities</button><button data-page="points">Points</button><button data-page="news">News</button>${admin ? '<button data-page="contacts">Contacts</button><button data-page="admin">Admin</button>' : ''}
+        </nav><div class="sidebar-bottom"><button class="secondary" style="width:100%" onclick="logout()">Keluar</button></div></aside>
+        <main class="main"><header class="topbar"><strong id="top-title">Dashboard</strong><div class="user-chip">${esc(user?.email)}<br><span class="role-label">Role: ${esc(user?.role || "User")}</span><br><span>${user?.points ?? 0} point</span></div></header><section class="content"><div id="page-notice" class="notice hidden"></div><div id="page-content"></div></section></main>
+    </div>`;
+            document.querySelectorAll("[data-page]").forEach(button => button.onclick = () => navigate(button.dataset.page));
+            navigate(currentPage);
+        }
+        function navigate(page) { currentPage = page; document.querySelectorAll("[data-page]").forEach(button => button.classList.toggle("active", button.dataset.page === page)); document.getElementById("top-title").textContent = page[0].toUpperCase() + page.slice(1); ({ dashboard: loadDashboard, activities: loadActivities, points: loadPoints, contacts: loadContacts, news: loadNews, admin: loadAdmin }[page] || loadDashboard)(); }
+        async function logout() { try { await api("/logout", { method: "POST" }); } catch (_) { } clearSession(); }
+
+        async function loadDashboard() {
+            const content = document.getElementById("page-content"); content.innerHTML = pageHead("Dashboard", "Ringkasan akun dan aktivitas Anda.");
+            try {
+                const [pointData, streakData, activityData] = await Promise.all([api("/points?userId=" + user.id), api("/streaks"), api("/activities?status=published&limit=5")]);
+                const state = pointData.data || {}; const streaks = streakData.data || []; const activities = activityData.data || [];
+                const globalStreak = streaks.find(item => item.streak_type === "daily_activity");
+                content.innerHTML += `<div class="grid grid-4"><div class="card"><div class="metric-label">Saldo point</div><div class="metric">${state.Balance ?? user.points ?? 0}</div></div><div class="card"><div class="metric-label">Global streak</div><div class="metric">${globalStreak?.current_streak ?? 0}</div><small class="muted">Semua kategori dihitung bersama</small></div><div class="card"><div class="metric-label">Activity tersedia</div><div class="metric">${activities.length}</div></div><div class="card"><div class="metric-label">Status akun</div><div class="metric">${user.is_active ? "Aktif" : "Pending"}</div></div></div><br><div class="grid grid-2"><div class="card"><h3>Global streak</h3>${globalStreak ? `<p><b>daily_activity</b><br><span class="badge green">${globalStreak.current_streak} hari</span> · terbaik ${globalStreak.longest_streak}</p><p class="muted">Check-in activity dari kategori berbeda pada hari yang sama tetap dihitung satu kali.</p>` : '<p class="muted">Belum ada global streak.</p>'}</div><div class="card"><h3>Activity terbaru</h3>${activities.length ? activities.map(item => `<p><b>${esc(item.title)}</b><br><span class="badge">${esc(item.category_name)}</span> <span class="badge">${esc(item.activity_type)}</span></p>`).join("") : '<p class="muted">Belum ada activity.</p>'}</div></div>`;
+            } catch (error) { showNotice(error.message, "error"); }
+        }
+        async function loadActivities() {
+            const content = document.getElementById("page-content"); content.innerHTML = pageHead("Activities", "Kegiatan, jadwal, streak, dan check-in.", isAdmin() ? `<button onclick="openActivityForm()">+ Buat activity</button>` : "") + `<div class="card"><div class="toolbar"><div><label>Search activity</label><input id="activity-search" placeholder="Cari judul atau deskripsi"></div><div><label>Type</label><select id="activity-type-filter"><option value="">Semua tipe</option><option value="one_time">One time</option><option value="recurring">Recurring</option></select></div><button onclick="fetchActivities()">Terapkan filter</button></div></div><br><div id="activity-table"></div>`; fetchActivities();
+        }
+        async function fetchActivities() { const search = field("activity-search"), type = field("activity-type-filter"), status = isAdmin() ? "" : "&status=published"; try { const data = await api(`/activities?limit=50${status}${search ? `&search=${encodeURIComponent(search)}` : ""}${type ? `&activity_type=${type}` : ""}`); const items = data.data || []; document.getElementById("activity-table").innerHTML = `<div class="card table-wrap"><table><thead><tr><th>Image</th><th>Activity</th><th>Category</th><th>Schedule</th><th>Status</th><th>Streak</th><th>Aksi</th></tr></thead><tbody>${items.map(item => `<tr><td>${item.image_url ? `<img src="${esc(mediaURL(item.image_url))}" alt="" style="width:68px;height:46px;object-fit:cover;border-radius:6px;">` : "-"}</td><td><b>${esc(item.title)}</b><br><small>${esc(item.description || "")}</small></td><td>${esc(item.category_name)}</td><td><span class="badge">${esc(item.activity_type)}</span><br><small>${item.schedule ? esc(item.schedule.frequency) : item.occurrence ? esc(item.occurrence.location || "One-time") : "-"}</small></td><td><span class="badge">${esc(item.status)}</span></td><td>${item.streak_enabled ? `${esc(item.streak_type)} (+${item.streak_points})` : "-"}</td><td><div class="actions">${isAdmin() ? `<button onclick="editActivity(${JSON.stringify(item).replace(/"/g, '&quot;')})">Edit</button>` : ""}<button onclick="checkIn('${esc(item.uuid)}')">Check-in</button>${isAdmin() ? `<button class="danger" onclick="deleteActivity('${esc(item.uuid)}')">Delete</button>` : ""}</div></td></tr>`).join("") || '<tr><td colspan="7">Tidak ada activity.</td></tr>'}</tbody></table></div>`; } catch (error) { showNotice(error.message, "error"); } }
+        async function checkIn(uuid) { try { const result = await api("/streaks/check-in", { method: "POST", body: JSON.stringify({ activity_uuid: uuid }) }); showNotice(`${result.message}. Streak: ${result.data.current_streak}, point: +${result.data.points_earned}`); } catch (error) { showNotice(error.message, "error"); } }
+        function openActivityForm(item = null) { const editing = Boolean(item); document.getElementById("page-content").insertAdjacentHTML("afterbegin", `<div class="card" id="activity-form-card"><h3>${editing ? "Edit" : "Buat"} activity</h3><div class="notice">Global streak: semua kategori memakai <b>daily_activity</b>. Site otomatis mengikuti user pembuat.</div><div class="grid grid-2"><div><label>Title</label><input id="new-act-title" value="${esc(item?.title || "")}"></div><div><label>Category</label><select id="new-act-category"><option value="">Memuat kategori...</option></select></div><div><label>Type</label><select id="new-act-type"><option value="one_time">One time</option><option value="recurring">Recurring</option></select></div><div><label>Status</label><select id="new-act-status"><option value="draft">Draft</option><option value="published">Published</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></div><div><label>Description</label><textarea id="new-act-description">${esc(item?.description || "")}</textarea></div><div><label>Site</label><input value="Otomatis dari site user" disabled></div><div><label>Streak type</label><input id="new-act-streak-type" value="daily_activity" readonly></div><div><label>Streak points</label><input id="new-act-streak-points" type="number" min="0" value="${item?.streak_points ?? 5}"></div><div><label>Gambar activity</label><input id="new-act-image" type="file" accept="image/jpeg,image/png,image/webp"></div><div><label>Occurrence starts</label><input id="new-act-starts" type="datetime-local"></div><div><label>Location</label><input id="new-act-location" value="${esc(item?.occurrence?.location || "")}" placeholder="Gedung gereja"></div><div><label>Recurring start date</label><input id="new-act-start-date" type="date"></div></div><br><div class="form-actions"><button onclick="saveActivity('${esc(item?.uuid || "")}')">${editing ? "Update" : "Simpan"}</button><button class="secondary" onclick="document.getElementById('activity-form-card').remove()">Batal</button></div></div><br>`); loadActivityCategories(item?.category_id); if (item?.activity_type) document.getElementById("new-act-type").value = item.activity_type; if (item?.status) document.getElementById("new-act-status").value = item.status; }
+        async function loadActivityCategories(selectedID = null) { try { const result = await api("/activity-categories"); const select = document.getElementById("new-act-category"); if (!select) return; select.innerHTML = (result.data || []).map(item => `<option value="${item.id}">${esc(item.name)} (${esc(item.code)})</option>`).join("") || '<option value="">Tidak ada kategori</option>'; if (selectedID) select.value = selectedID; } catch (error) { showNotice(error.message, "error"); } }
+        async function saveActivity(uuid) { try { const type = field("new-act-type"), payload = { title: field("new-act-title"), description: field("new-act-description") || null, category_id: Number(field("new-act-category")), activity_type: type, status: field("new-act-status"), streak_enabled: true, streak_type: "daily_activity", streak_points: Number(field("new-act-streak-points") || 0) }; if (type === "recurring") payload.schedule = { frequency: "weekly", interval_value: 1, days_of_week: [0], start_date: field("new-act-start-date") || new Date().toISOString().slice(0, 10), start_time: "09:00", end_time: "11:00", timezone: "Asia/Jakarta" }; else payload.occurrence = { starts_at: field("new-act-starts") ? new Date(field("new-act-starts")).toISOString() : new Date().toISOString(), location: field("new-act-location") || null, status: "scheduled" }; const result = await api(uuid ? `/admin/activities/${uuid}` : "/admin/activities", { method: uuid ? "PATCH" : "POST", body: JSON.stringify(payload) }); const image = document.getElementById("new-act-image")?.files[0]; const savedUUID = uuid || result.data?.uuid; if (image && savedUUID) await uploadActivityImage(savedUUID, image); showNotice(uuid ? "Activity berhasil diupdate" : "Activity berhasil dibuat"); loadActivities(); } catch (error) { showNotice(error.message, "error"); } }
+        function editActivity(item) { openActivityForm(item); }
+        async function deleteActivity(uuid) { if (!confirm("Hapus activity ini?")) return; try { await api(`/admin/activities/${encodeURIComponent(uuid)}`, { method: "DELETE" }); showNotice("Activity berhasil dihapus"); fetchActivities(); } catch (error) { showNotice(error.message, "error"); } }
+        async function uploadActivityImage(uuid, file) { const form = new FormData(); form.append("image", file); const headers = {}; if (token) headers.Authorization = `Bearer ${token}`; const response = await fetch(`${API_URL}/admin/activities/${encodeURIComponent(uuid)}/image`, { method: "POST", headers, body: form }); const result = await response.json(); if (!response.ok) throw new Error(`${response.status}: ${result.message || "Upload gambar gagal"} ${result.errors?.detail || ""}`); return result; }
+        async function loadPoints() { const content = document.getElementById("page-content"); content.innerHTML = pageHead("Points", "Saldo dan riwayat point akun.") + `<div id="points-view"></div>`; try { const data = await api(`/points?userId=${user.id}&limit=20`); const state = data.data || {}; document.getElementById("points-view").innerHTML = `<div class="grid grid-2"><div class="card"><div class="metric-label">Saldo saat ini</div><div class="metric">${state.Balance ?? 0}</div><p class="muted">Point bertambah dari reward activity atau streak.</p></div><div class="card"><h3>Riwayat</h3><div class="table-wrap"><table><thead><tr><th>Perubahan</th><th>Saldo</th><th>Alasan</th><th>Waktu</th></tr></thead><tbody>${(state.History || []).map(item => `<tr><td>${item.ChangeAmount}</td><td>${item.BalanceAfter}</td><td>${esc(item.reason)}</td><td>${esc(item.CreatedAt || "")}</td></tr>`).join("") || '<tr><td colspan="4">Belum ada riwayat.</td></tr>'}</tbody></table></div></div></div>`; } catch (error) { showNotice(error.message, "error"); } }
+        async function loadContacts() { const content = document.getElementById("page-content"); content.innerHTML = pageHead("Contacts", "Data kontak jemaat.") + `<div class="card"><button onclick="fetchContacts()">Refresh</button></div><br><div id="contacts-view"></div>`; fetchContacts(); }
+        async function z() { try { const data = await api("/admin/contacts?limit=50"); const items = data.data || []; document.getElementById("contacts-view").innerHTML = `<div class="card table-wrap"><table><thead><tr><th>Nama</th><th>Telepon</th><th>Email</th><th>Point</th><th>Site</th></tr></thead><tbody>${items.map(item => `<tr><td>${esc(item.full_name)}</td><td>${esc(item.phone || "-")}</td><td>${esc(item.email || "-")}</td><td>${item.points ?? 0}</td><td>${item.site_id ?? "-"}</td></tr>`).join("")}</tbody></table></div>` } catch (error) { showNotice(error.message, "error") } }
+        async function loadNews() { const content = document.getElementById("page-content"); content.innerHTML = pageHead("News", isAdmin() ? "Kelola berita dengan form lengkap dan preview konten." : "Berita terbaru.", isAdmin() ? `<button onclick="openNewsForm()">+ Buat news</button>` : "") + `<div class="card"><div class="toolbar"><div><label>Search berita</label><input id="news-search" placeholder="Cari judul atau isi"></div><div><label>Status</label><select id="news-status-filter"><option value="">Semua status</option><option value="published">Published</option>${isAdmin() ? '<option value="draft">Draft</option>' : ''}</select></div><button onclick="fetchNews()">Terapkan filter</button></div></div><br><div id="news-view"></div>`; fetchNews() }
+        async function fetchNews() { try { const search = field("news-search"), status = field("news-status-filter"), visibility = isAdmin() ? "" : "&status=published"; const data = await api(`/news?limit=50${visibility}${search ? `&search=${encodeURIComponent(search)}` : ""}`); const items = (data.data || []).filter(item => (isAdmin() || item.status === "published") && (!status || item.status === status)); document.getElementById("news-view").innerHTML = `<div class="card table-wrap"><table><thead><tr><th>Image</th><th>Judul</th><th>Slug</th><th>Status</th><th>Featured</th><th>Views</th><th>Aksi</th></tr></thead><tbody>${items.map(item => `<tr><td>${item.image_url ? `<img src="${esc(mediaURL(item.image_url))}" alt="" style="width:68px;height:46px;object-fit:cover;border-radius:6px;">` : "-"}</td><td><b>${esc(item.title)}</b><br><small>${esc(item.excerpt || "")}</small></td><td>${esc(item.slug)}</td><td><span class="badge">${esc(item.status)}</span></td><td>${item.is_featured ? "Ya" : "Tidak"}</td><td>${item.views || 0}</td><td><div class="actions">${isAdmin() ? `<button onclick="editNews(${JSON.stringify(item).replace(/"/g, '&quot;')})">Edit</button><button class="danger" onclick="deleteNews('${esc(item.uuid)}')">Delete</button>` : ""}</div></td></tr>`).join("") || '<tr><td colspan="7">Belum ada news.</td></tr>'}</tbody></table></div>` } catch (error) { showNotice(error.message, "error") } }
+        function openNewsForm(item = null) { const editing = Boolean(item); document.getElementById("page-content").insertAdjacentHTML("afterbegin", `<div class="card" id="news-form-card"><h3>${editing ? "Edit" : "Buat"} news</h3><div class="grid grid-2"><div><label>Judul</label><input id="news-title-form" value="${esc(item?.title || "")}"></div><div><label>Slug</label><input id="news-slug-form" value="${esc(item?.slug || "")}" placeholder="judul-berita"></div><div><label>Status</label><select id="news-status-form"><option value="draft">Draft</option><option value="published">Published</option></select></div><div><label>Site ID (optional)</label><input id="news-site-form" type="number" value="${item?.site_id ?? ""}"></div><div><label>Author ID (optional)</label><input id="news-author-form" type="number" value="${item?.author_id ?? user?.id ?? ""}"></div><div><label>Published at</label><input id="news-published-form" type="datetime-local"></div><div style="grid-column:1/-1"><label>Excerpt</label><input id="news-excerpt-form" value="${esc(item?.excerpt || "")}"></div><div style="grid-column:1/-1"><label>Content</label><textarea id="news-content-form" style="min-height:180px">${esc(item?.content || "")}</textarea></div><div><label>Meta JSON (optional)</label><textarea id="news-meta-form" placeholder='{"source":"internal"}'>${item?.meta ? esc(typeof item.meta === "string" ? item.meta : JSON.stringify(item.meta)) : ""}</textarea></div><div><label><input id="news-featured-form" type="checkbox" ${item?.is_featured ? "checked" : ""}> Featured news</label></div><div><label>Gambar news</label><input id="news-image-form" type="file" accept="image/jpeg,image/png,image/webp"></div></div><br><div class="form-actions"><button onclick="saveNews('${esc(item?.uuid || "")}')">${editing ? "Update" : "Simpan"}</button><button class="secondary" onclick="document.getElementById('news-form-card').remove()">Batal</button></div></div><br>`); if (item?.status) document.getElementById("news-status-form").value = item.status; }
+        async function saveNews(uuid) { try { let meta = null; if (field("news-meta-form")) meta = JSON.parse(field("news-meta-form")); const payload = { title: field("news-title-form"), slug: field("news-slug-form"), excerpt: field("news-excerpt-form") || null, content: field("news-content-form"), author_id: optionalInt("news-author-form"), site_id: optionalInt("news-site-form"), status: field("news-status-form"), is_featured: document.getElementById("news-featured-form").checked, meta: meta, published_at: field("news-published-form") ? new Date(field("news-published-form")).toISOString() : null }; const result = await api(uuid ? `/admin/news/${uuid}` : "/admin/news", { method: uuid ? "PATCH" : "POST", body: JSON.stringify(payload) }); const image = document.getElementById("news-image-form")?.files[0]; const savedUUID = uuid || result.data?.uuid; if (image && savedUUID) await uploadNewsImage(savedUUID, image); showNotice(uuid ? "News berhasil diupdate" : "News berhasil dibuat"); loadNews(); } catch (error) { showNotice(error.message, "error"); } }
+        async function uploadNewsImage(uuid, file) { const form = new FormData(); form.append("image", file); const headers = {}; if (token) headers.Authorization = `Bearer ${token}`; const response = await fetch(`${API_URL}/admin/news/${encodeURIComponent(uuid)}/image`, { method: "POST", headers, body: form }); const result = await response.json(); if (!response.ok) throw new Error(`${response.status}: ${result.message || "Upload gambar gagal"} ${result.errors?.detail || ""}`); return result; }
+        function editNews(item) { openNewsForm(item); }
+        async function deleteNews(uuid) { if (!confirm("Hapus news ini?")) return; try { await api(`/admin/news/${encodeURIComponent(uuid)}`, { method: "DELETE" }); showNotice("News berhasil dihapus"); fetchNews(); } catch (error) { showNotice(error.message, "error"); } }
+        async function loadAdmin() { const content = document.getElementById("page-content"); content.innerHTML = pageHead("Admin", "Approval dan pengelolaan role.") + `<div class="grid grid-2"><div class="card"><h3>Pending approvals</h3><button onclick="fetchApprovals()">Refresh</button><div id="approvals-view"></div></div><div class="card"><h3>Roles</h3><button onclick="fetchRoles()">Refresh</button><div id="roles-view"></div></div></div>`; fetchApprovals(); fetchRoles() }
+        async function fetchApprovals() { try { const data = await api("/admin/approvals"); document.getElementById("approvals-view").innerHTML = (data.data || []).map(item => `<div style="border-bottom:1px solid var(--line);padding:12px 0"><b>${esc(item.email)}</b><br><span class="muted">${esc(item.approval_status)}</span><div class="actions"><button onclick="approve(${item.id})">Approve</button><button class="danger" onclick="reject(${item.id})">Reject</button></div></div>`).join("") || '<p class="muted">Tidak ada antrean.</p>' } catch (error) { showNotice(error.message, "error") } }
+        async function approve(id) { try { await api(`/admin/approvals/${id}/approve`, { method: "POST" }); showNotice("User disetujui"); fetchApprovals() } catch (error) { showNotice(error.message, "error") } }
+        async function reject(id) { try { await api(`/admin/approvals/${id}/reject`, { method: "POST" }); showNotice("User ditolak"); fetchApprovals() } catch (error) { showNotice(error.message, "error") } }
+        async function fetchRoles() { try { const data = await api("/admin/roles"); document.getElementById("roles-view").innerHTML = (data.data || []).map(item => `<p><b>${esc(item.name)}</b><br><span class="badge">${esc(item.code)}</span></p>`).join("") || '<p class="muted">Belum ada role.</p>' } catch (error) { showNotice(error.message, "error") } }
+
+        if (token && user) renderApp(); else renderLogin();
+    </script>
+</body>
+
+</html>

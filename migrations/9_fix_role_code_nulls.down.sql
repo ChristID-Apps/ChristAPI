@@ -1,0 +1,2 @@
+ALTER TABLE public.roles
+    ALTER COLUMN code DROP NOT NULL;
