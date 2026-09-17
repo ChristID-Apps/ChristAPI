@@ -115,7 +115,7 @@ func (s *AuthService) RegisterWithContact(fullName string, phone *string, addres
 func (s *AuthService) VerifyOTP(email, otpCode string) error {
 	user, err := s.Repo.FindByEmail(email)
 	if err != nil {
-		return err
+		return fmt.Errorf("find user for otp verification: %w", err)
 	}
 	if user == nil {
 		return errors.New("user not found")
@@ -127,14 +127,17 @@ func (s *AuthService) VerifyOTP(email, otpCode string) error {
 
 	valid, err := s.Repo.VerifyOTP(user.ID, otpCode)
 	if err != nil {
-		return err
+		return fmt.Errorf("check otp record: %w", err)
 	}
 	if !valid {
 		return errors.New("invalid or expired OTP")
 	}
 
 	// Update user status to pending_approval
-	return s.Repo.UpdateStatus(user.ID, "pending_approval", false)
+	if err := s.Repo.UpdateStatus(user.ID, "pending_approval", false); err != nil {
+		return fmt.Errorf("update user approval status after otp verification: %w", err)
+	}
+	return nil
 }
 
 // Function ini fungsinya untuk login atau register user via Google. Kalau user sudah ada, maka akan login. Kalau belum ada, maka akan register user baru dengan status pending_username, jadi nanti user harus submit username dulu sebelum bisa login.
