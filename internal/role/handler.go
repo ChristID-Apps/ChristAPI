@@ -2,6 +2,7 @@ package role
 
 import (
 	"strconv"
+	"strings"
 
 	"christ-api/internal/role/dto/requests"
 	"christ-api/internal/role/helpers"
@@ -58,12 +59,12 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 func (h *Handler) Update(c *fiber.Ctx) error {
 	idStr := c.Params("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
+	if err != nil || id < 1 {
 		return response.ErrorDetail(c, 422, "Invalid role ID", err)
 	}
 
-	req := new(requests.UpdateRoleRequest)
-	if err := c.BodyParser(req); err != nil {
+	req, err := parseUpdateRoleRequest(c)
+	if err != nil {
 		return response.ErrorDetail(c, 422, "Invalid role request", err)
 	}
 
@@ -77,4 +78,48 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 	}
 
 	return response.Success(c, "Role updated", RoleToRoleResponse(role))
+}
+
+func parseUpdateRoleRequest(c *fiber.Ctx) (*requests.UpdateRoleRequest, error) {
+	contentType := strings.ToLower(string(c.Request().Header.ContentType()))
+	if strings.HasPrefix(contentType, "multipart/form-data") || strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+		req := &requests.UpdateRoleRequest{Present: make(map[string]bool)}
+		set := func(name, value string) {
+			req.Present[name] = true
+			switch name {
+			case "name":
+				req.Name = &value
+			case "code":
+				req.Code = &value
+			case "description":
+				if strings.EqualFold(strings.TrimSpace(value), "null") {
+					req.Description = nil
+				} else {
+					req.Description = &value
+				}
+			}
+		}
+		if strings.HasPrefix(contentType, "multipart/form-data") {
+			form, err := c.MultipartForm()
+			if err != nil {
+				return nil, err
+			}
+			for name, values := range form.Value {
+				if len(values) > 0 {
+					set(name, values[0])
+				}
+			}
+		} else {
+			c.Request().PostArgs().VisitAll(func(key, value []byte) {
+				set(string(key), string(value))
+			})
+		}
+		return req, nil
+	}
+
+	req := new(requests.UpdateRoleRequest)
+	if err := c.BodyParser(req); err != nil {
+		return nil, err
+	}
+	return req, nil
 }

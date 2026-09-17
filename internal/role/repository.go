@@ -105,7 +105,16 @@ func (r *RoleRepository) Update(id int64, req *requests.UpdateRoleRequest) (*Rol
 	args := []interface{}{}
 	add := func(name string, value interface{}) {
 		columns = append(columns, name+fmt.Sprintf("=$%d", len(args)+1))
-		args = append(args, value)
+		switch typed := value.(type) {
+		case *string:
+			if typed == nil {
+				args = append(args, nil)
+			} else {
+				args = append(args, *typed)
+			}
+		default:
+			args = append(args, value)
+		}
 	}
 	if req.Present["name"] {
 		add("name", req.Name)
@@ -127,6 +136,9 @@ func (r *RoleRepository) Update(id int64, req *requests.UpdateRoleRequest) (*Rol
 	var sID sql.NullInt64
 	row := r.DB.QueryRow(query, args...)
 	if err := row.Scan(&role.ID, &role.Name, &codeN, &desc, &sID); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("role %d not found", id)
+		}
 		return nil, err
 	}
 	if codeN.Valid {

@@ -2,6 +2,7 @@ package activities
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -71,8 +72,8 @@ func (h *Handler) Get(c *fiber.Ctx) error {
 }
 
 func (h *Handler) Create(c *fiber.Ctx) error {
-	req := new(requests.CreateActivityRequest)
-	if err := c.BodyParser(req); err != nil {
+	req, err := parseCreateActivityRequest(c)
+	if err != nil {
 		return response.ErrorDetail(c, 422, "Invalid activity request", err)
 	}
 	req.SiteID = nil
@@ -88,8 +89,8 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 }
 
 func (h *Handler) Update(c *fiber.Ctx) error {
-	req := new(requests.UpdateActivityRequest)
-	if err := c.BodyParser(req); err != nil {
+	req, err := parseUpdateActivityRequest(c)
+	if err != nil {
 		return response.ErrorDetail(c, 422, "Invalid activity request", err)
 	}
 	item, err := h.service.Update(c.Params("uuid"), req)
@@ -97,6 +98,188 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 		return activityError(c, err, "Failed to update activity")
 	}
 	return response.Success(c, "Activity updated", item)
+}
+
+func formValues(c *fiber.Ctx) (map[string]string, error) {
+	values := make(map[string]string)
+	contentType := strings.ToLower(string(c.Request().Header.ContentType()))
+	if strings.HasPrefix(contentType, "multipart/form-data") {
+		form, err := c.MultipartForm()
+		if err != nil {
+			return nil, err
+		}
+		for key, items := range form.Value {
+			if len(items) > 0 {
+				values[key] = items[0]
+			}
+		}
+		return values, nil
+	}
+	c.Request().PostArgs().VisitAll(func(key, value []byte) {
+		values[string(key)] = string(value)
+	})
+	return values, nil
+}
+
+func parseCreateActivityRequest(c *fiber.Ctx) (*requests.CreateActivityRequest, error) {
+	contentType := strings.ToLower(string(c.Request().Header.ContentType()))
+	if !strings.HasPrefix(contentType, "multipart/form-data") && !strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+		req := new(requests.CreateActivityRequest)
+		return req, c.BodyParser(req)
+	}
+	values, err := formValues(c)
+	if err != nil {
+		return nil, err
+	}
+	req := &requests.CreateActivityRequest{
+		Title: values["title"], Description: stringPointer(values, "description"),
+		ActivityType: values["activity_type"], Status: values["status"],
+		StreakType: stringPointer(values, "streak_type"),
+	}
+	req.CategoryID, err = int64Value(values, "category_id")
+	if err != nil {
+		return nil, err
+	}
+	req.StreakPoints, err = int64Value(values, "streak_points")
+	if err != nil && values["streak_points"] != "" {
+		return nil, err
+	}
+	req.MaxParticipants, err = intPointer(values, "max_participants")
+	if err != nil {
+		return nil, err
+	}
+	req.RequiresRegistration, err = boolValue(values, "requires_registration")
+	if err != nil {
+		return nil, err
+	}
+	req.StreakEnabled, err = boolValue(values, "streak_enabled")
+	if err != nil {
+		return nil, err
+	}
+	if values["schedule"] != "" {
+		if err := json.Unmarshal([]byte(values["schedule"]), &req.Schedule); err != nil {
+			return nil, err
+		}
+	}
+	if values["occurrence"] != "" {
+		if err := json.Unmarshal([]byte(values["occurrence"]), &req.Occurrence); err != nil {
+			return nil, err
+		}
+	}
+	return req, nil
+}
+
+func parseUpdateActivityRequest(c *fiber.Ctx) (*requests.UpdateActivityRequest, error) {
+	contentType := strings.ToLower(string(c.Request().Header.ContentType()))
+	if !strings.HasPrefix(contentType, "multipart/form-data") && !strings.HasPrefix(contentType, "application/x-www-form-urlencoded") {
+		req := new(requests.UpdateActivityRequest)
+		return req, c.BodyParser(req)
+	}
+	values, err := formValues(c)
+	if err != nil {
+		return nil, err
+	}
+	req := &requests.UpdateActivityRequest{Present: make(map[string]bool)}
+	for key := range values {
+		req.Present[key] = true
+	}
+	req.Title = stringPointer(values, "title")
+	req.Description = stringPointer(values, "description")
+	req.ActivityType = stringPointer(values, "activity_type")
+	if req.Present["site_id"] {
+		req.SiteID, err = int64Pointer(values, "site_id")
+	}
+	if err != nil {
+		return nil, err
+	}
+	req.Status = stringPointer(values, "status")
+	req.StreakType = stringPointer(values, "streak_type")
+	if req.Present["category_id"] {
+		req.CategoryID, err = int64Pointer(values, "category_id")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if req.Present["streak_points"] {
+		req.StreakPoints, err = int64Pointer(values, "streak_points")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if req.Present["max_participants"] {
+		req.MaxParticipants, err = intPointer(values, "max_participants")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if req.Present["requires_registration"] {
+		req.RequiresRegistration, err = boolPointer(values, "requires_registration")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if req.Present["streak_enabled"] {
+		req.StreakEnabled, err = boolPointer(values, "streak_enabled")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if values["schedule"] != "" {
+		if err := json.Unmarshal([]byte(values["schedule"]), &req.Schedule); err != nil {
+			return nil, err
+		}
+	}
+	if values["occurrence"] != "" {
+		if err := json.Unmarshal([]byte(values["occurrence"]), &req.Occurrence); err != nil {
+			return nil, err
+		}
+	}
+	return req, nil
+}
+
+func stringPointer(values map[string]string, key string) *string {
+	if value, ok := values[key]; ok {
+		return &value
+	}
+	return nil
+}
+
+func int64Value(values map[string]string, key string) (int64, error) {
+	if values[key] == "" {
+		return 0, nil
+	}
+	return strconv.ParseInt(values[key], 10, 64)
+}
+
+func int64Pointer(values map[string]string, key string) (*int64, error) {
+	value, err := int64Value(values, key)
+	if err != nil {
+		return nil, err
+	}
+	return &value, nil
+}
+
+func intPointer(values map[string]string, key string) (*int, error) {
+	if values[key] == "" || strings.EqualFold(values[key], "null") {
+		return nil, nil
+	}
+	value, err := strconv.Atoi(values[key])
+	return &value, err
+}
+
+func boolValue(values map[string]string, key string) (bool, error) {
+	if values[key] == "" {
+		return false, nil
+	}
+	return strconv.ParseBool(values[key])
+}
+
+func boolPointer(values map[string]string, key string) (*bool, error) {
+	value, err := boolValue(values, key)
+	if err != nil {
+		return nil, err
+	}
+	return &value, nil
 }
 
 func (h *Handler) Delete(c *fiber.Ctx) error {

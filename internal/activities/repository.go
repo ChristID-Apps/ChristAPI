@@ -437,8 +437,29 @@ func (r *Repository) Count(filter ActivityFilter) (int, error) {
 	}
 	query := `SELECT COUNT(*) FROM activities a WHERE a.deleted_at IS NULL`
 	args := []interface{}{}
+	argIndex := 1
+	if filter.Search != "" {
+		query += fmt.Sprintf(" AND (a.title ILIKE $%d OR a.description ILIKE $%d)", argIndex, argIndex)
+		args = append(args, "%"+filter.Search+"%")
+		argIndex++
+	}
+	if filter.CategoryID != nil {
+		query += fmt.Sprintf(" AND a.category_id = $%d", argIndex)
+		args = append(args, *filter.CategoryID)
+		argIndex++
+	}
+	if filter.SiteID != nil {
+		query += fmt.Sprintf(" AND a.site_id = $%d", argIndex)
+		args = append(args, *filter.SiteID)
+		argIndex++
+	}
+	if filter.ActivityType != "" {
+		query += fmt.Sprintf(" AND a.activity_type = $%d", argIndex)
+		args = append(args, filter.ActivityType)
+		argIndex++
+	}
 	if filter.Status != "" {
-		query += " AND a.status=$1"
+		query += fmt.Sprintf(" AND a.status = $%d", argIndex)
 		args = append(args, filter.Status)
 	}
 	var count int

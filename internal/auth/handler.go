@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 
 	"christ-api/internal/auth/dto/requests"
 	"christ-api/internal/auth/helpers"
@@ -96,19 +97,35 @@ func registerErrorResponse(err error) (int, string) {
 func (h *Handler) VerifyOTP(c *fiber.Ctx) error {
 	req := new(requests.VerifyOTPRequest)
 	if err := c.BodyParser(req); err != nil {
+		log.Printf("otp verification failed stage=parse error=%v", err)
 		return response.ErrorDetail(c, 422, "Invalid OTP request", err)
 	}
 
 	if err := helpers.ValidateVerifyOTPRequest(req); err != nil {
+		log.Printf("otp verification failed stage=validate email=%s error=%v", maskEmail(req.Email), err)
 		return response.ErrorDetail(c, 422, "OTP validation failed", err)
 	}
 
 	err := h.service.VerifyOTP(req.Email, req.OTPCode)
 	if err != nil {
+		log.Printf("otp verification failed stage=service email=%s error=%v", maskEmail(req.Email), err)
 		return response.ErrorDetail(c, 400, "OTP verification failed", err)
 	}
 
+	log.Printf("otp verification succeeded email=%s", maskEmail(req.Email))
 	return response.Success(c, "OTP verified successfully. Your account is now pending admin approval.", nil)
+}
+
+func maskEmail(email string) string {
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) != 2 || parts[0] == "" {
+		return "[invalid-email]"
+	}
+	local := parts[0]
+	if len(local) == 1 {
+		return "*@" + parts[1]
+	}
+	return local[:1] + "***@" + parts[1]
 }
 
 func (h *Handler) LoginGoogle(c *fiber.Ctx) error {

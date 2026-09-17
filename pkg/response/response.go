@@ -1,6 +1,7 @@
 package response
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -31,7 +32,10 @@ func ErrorDetail(c *fiber.Ctx, status int, message string, err error) error {
 		return Error(c, status, message, nil)
 	}
 	log.Printf("api error: %s: %v", message, err)
-	return Error(c, status, message, nil)
+	return Error(c, status, message, fiber.Map{
+		"type":   fmt.Sprintf("%T", err),
+		"detail": err.Error(),
+	})
 }
 
 func Paginated(c *fiber.Ctx, message string, data interface{}, meta interface{}) error {
