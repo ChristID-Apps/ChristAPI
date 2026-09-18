@@ -3,6 +3,7 @@ package routes
 import (
 	"christ-api/internal/activities"
 	"christ-api/internal/auth"
+	"christ-api/internal/bible"
 	"christ-api/internal/contacts"
 	"christ-api/internal/middleware"
 	"christ-api/internal/news"
@@ -26,8 +27,16 @@ func Setup(app *fiber.App) {
 	streakHandler := streaks.NewHandler(&streaks.Repository{DB: database.DB})
 	newsHandler := news.NewHandler(&news.NewsRepository{DB: database.DB})
 	sitesHandler := sites.NewHandler(&sites.SiteRepository{DB: database.DB})
+	bibleHandler := bible.NewHandler(&bible.BibleRepository{DB: database.DB})
 
 	api := app.Group("/api")
+
+	// Bible read routes
+	api.Get("/bible/versions", bibleHandler.ListVersions)
+	api.Get("/bible/books", bibleHandler.ListBooks)
+	api.Get("/bible/:version/search", bibleHandler.Search)
+	api.Get("/bible/:version/:book/:chapter/:verse", bibleHandler.GetVerse)
+	api.Get("/bible/:version/:book/:chapter", bibleHandler.GetChapter)
 
 	// public auth routes
 	api.Post("/login", authHandler.Login)
