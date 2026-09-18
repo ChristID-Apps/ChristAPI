@@ -58,19 +58,29 @@ func Setup(app *fiber.App) {
 	adminRoutes.Get("/roles", roleHandler.List)
 	adminRoutes.Post("/roles", roleHandler.Create)
 	adminRoutes.Patch("/roles/:id", roleHandler.Update)
+
+	// activities (admin only)
 	adminRoutes.Post("/activities", activityHandler.Create)
 	adminRoutes.Patch("/activities/:uuid", activityHandler.Update)
 	adminRoutes.Delete("/activities/:uuid", activityHandler.Delete)
 	adminRoutes.Post("/activities/:uuid/image", activityHandler.UploadImage)
+
+	// sites (admin only)
 	adminRoutes.Post("/sites", sitesHandler.Create)
 	adminRoutes.Patch("/sites/:uuid", sitesHandler.Update)
+
+	// contacts (admin only)
 	adminRoutes.Post("/contacts", contactsHandler.Create)
 	adminRoutes.Patch("/contacts/:id", contactsHandler.Update)
 	adminRoutes.Delete("/contacts/:id", contactsHandler.Delete)
 	adminRoutes.Get("/contacts", contactsHandler.List)
 	adminRoutes.Get("/contacts/:id", contactsHandler.List)
+
+	// points (admin only)
 	adminRoutes.Get("/points", pointsHandler.Get)
 	adminRoutes.Post("/points/earn", pointsHandler.Earn)
+
+	// streaks (admin only)
 	adminRoutes.Post("/news", newsHandler.Create)
 	adminRoutes.Patch("/news/:uuid", newsHandler.Update)
 	adminRoutes.Delete("/news/:uuid", newsHandler.Delete)
