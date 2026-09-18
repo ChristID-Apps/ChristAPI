@@ -3,6 +3,7 @@ package auth
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"christ-api/internal/auth/dto/responses"
@@ -273,12 +274,14 @@ func (r *AuthRepository) VerifyOTP(userID int64, otpCode string) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM user_otps WHERE user_id = $1 AND otp_code = $2 AND expired_at > NOW())`
 	err := r.DB.QueryRow(query, userID, otpCode).Scan(&exists)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("query otp record for user %d: %w", userID, err)
 	}
 
 	if exists {
 		// Clean up the OTP
-		_, _ = r.DB.Exec("DELETE FROM user_otps WHERE user_id = $1", userID)
+		if _, err := r.DB.Exec("DELETE FROM user_otps WHERE user_id = $1", userID); err != nil {
+			return false, fmt.Errorf("delete used otp for user %d: %w", userID, err)
+		}
 		return true, nil
 	}
 

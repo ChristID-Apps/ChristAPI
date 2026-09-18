@@ -28,7 +28,7 @@ func (s *AuthService) Login(email, password string, siteID *int64) (string, *res
 
 	// kalau user tidak ditemukan, return error
 	if user == nil {
-		return "", nil, errors.New("user not found")
+		return "", nil, ErrUserNotFound
 	}
 
 	// kalau user bukan menggunakan credentials, return error
@@ -39,17 +39,20 @@ func (s *AuthService) Login(email, password string, siteID *int64) (string, *res
 	// jadi kalau login by google tapi usernya terdaftar pake email & password, maka user harus login pake email & password, bukan google login
 	// nah kaau login by email & password tapi usernya terdaftar pake google login, maka user harus login pake google login, bukan email & password
 	if user.AuthProvider != "credentials" {
-		return "", nil, fmt.Errorf("please login using your %s account", user.AuthProvider)
+		return "", nil, fmt.Errorf("%w: please login using your %s account", ErrWrongProvider, user.AuthProvider)
 	}
 
 	// cek password
 	if err := helpers.ComparePassword(user.Password, password); err != nil {
-		return "", nil, errors.New("wrong password")
+		return "", nil, ErrInvalidPassword
 	}
 
 	// cek status user, apakah sudah diapprove dan aktif
-	if !user.IsActive || user.ApprovalStatus != "approved" {
-		return "", nil, fmt.Errorf("login failed: account status is %s and inactive", user.ApprovalStatus)
+	if !user.IsActive {
+		return "", nil, ErrAccountInactive
+	}
+	if user.ApprovalStatus != "approved" {
+		return "", nil, fmt.Errorf("%w: current status is %s", ErrAccountPending, user.ApprovalStatus)
 	}
 
 	// update last login dan site id
@@ -80,7 +83,7 @@ func (s *AuthService) RegisterWithContact(fullName string, phone *string, addres
 		return "", nil, nil, err
 	}
 	if existing != nil {
-		return "", nil, nil, errors.New("user already exists")
+		return "", nil, nil, ErrUserAlreadyExists
 	}
 
 	hashed, err := helpers.HashPassword(password)
@@ -103,7 +106,6 @@ func (s *AuthService) RegisterWithContact(fullName string, phone *string, addres
 	if err := emailsvc.SendOTP(u.Email, otp); err != nil {
 		// Log error but don't fail registration — user can still verify with console OTP if email fails
 		fmt.Printf("[WARN] Failed to send OTP email to %s: %v\n", u.Email, err)
-		fmt.Printf("[FALLBACK] OTP for testing: %s (expires in 5 minutes)\n", otp)
 	}
 
 	return otp, u, c, nil
@@ -113,7 +115,7 @@ func (s *AuthService) RegisterWithContact(fullName string, phone *string, addres
 func (s *AuthService) VerifyOTP(email, otpCode string) error {
 	user, err := s.Repo.FindByEmail(email)
 	if err != nil {
-		return err
+		return fmt.Errorf("find user for otp verification: %w", err)
 	}
 	if user == nil {
 		return errors.New("user not found")
@@ -125,14 +127,17 @@ func (s *AuthService) VerifyOTP(email, otpCode string) error {
 
 	valid, err := s.Repo.VerifyOTP(user.ID, otpCode)
 	if err != nil {
-		return err
+		return fmt.Errorf("check otp record: %w", err)
 	}
 	if !valid {
 		return errors.New("invalid or expired OTP")
 	}
 
 	// Update user status to pending_approval
-	return s.Repo.UpdateStatus(user.ID, "pending_approval", false)
+	if err := s.Repo.UpdateStatus(user.ID, "pending_approval", false); err != nil {
+		return fmt.Errorf("update user approval status after otp verification: %w", err)
+	}
+	return nil
 }
 
 // Function ini fungsinya untuk login atau register user via Google. Kalau user sudah ada, maka akan login. Kalau belum ada, maka akan register user baru dengan status pending_username, jadi nanti user harus submit username dulu sebelum bisa login.
@@ -208,8 +213,8 @@ func (s *AuthService) GoogleLoginOrRegister(email, googleID string, siteID *int6
 	return token, "approved", profile, nil
 }
 
-func (s *AuthService) SubmitGoogleUsername(userID int64, username, fullName string, phone, address *string, siteID *int64) error {
-	user, err := s.Repo.FindByID(userID)
+func (s *AuthService) SubmitGoogleUsername(email, googleID, username, fullName string, phone, address *string, siteID *int64) error {
+	user, err := s.Repo.FindByEmail(email)
 	if err != nil {
 		return err
 	}
@@ -219,6 +224,9 @@ func (s *AuthService) SubmitGoogleUsername(userID int64, username, fullName stri
 
 	if user.AuthProvider != "google" {
 		return errors.New("only google users can submit username via this endpoint")
+	}
+	if user.GoogleID == nil || *user.GoogleID != googleID {
+		return errors.New("google account does not match user")
 	}
 
 	if user.ApprovalStatus != "pending_username" {
@@ -238,7 +246,7 @@ func (s *AuthService) SubmitGoogleUsername(userID int64, username, fullName stri
 	}
 
 	// Update username, contact_id, and approval status
-	return s.Repo.UpdateUsernameContactAndStatus(userID, username, contactID, "pending_approval")
+	return s.Repo.UpdateUsernameContactAndStatus(user.ID, username, contactID, "pending_approval")
 }
 
 func (s *AuthService) ApproveUser(userID int64) error {

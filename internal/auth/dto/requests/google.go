@@ -6,7 +6,7 @@ type GoogleLoginRequest struct {
 }
 
 type SubmitGoogleUsernameRequest struct {
-	UserID   int64   `json:"user_id"`
+	IDToken  string  `json:"id_token"`
 	Username string  `json:"username"`
 	FullName string  `json:"full_name"`
 	Phone    *string `json:"phone,omitempty"`

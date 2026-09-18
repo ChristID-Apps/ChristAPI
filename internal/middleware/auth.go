@@ -22,15 +22,15 @@ func AuthMiddleware(c *fiber.Ctx) error {
 	// format: Bearer TOKEN
 	tokenString := strings.Split(authHeader, " ")
 	if len(tokenString) != 2 {
-		return response.Error(c, 401, "invalid token format", nil)
+		return response.Error(c, 401, "invalid token format", fiber.Map{"detail": "Authorization must use the Bearer <token> format"})
 	}
 
 	token, err := jwtlib.Parse(tokenString[1], func(t *jwtlib.Token) (interface{}, error) {
 		return jwtpkg.Secret(), nil
-	})
+	}, jwtlib.WithValidMethods([]string{jwtlib.SigningMethodHS256.Alg()}))
 
 	if err != nil || !token.Valid {
-		return response.Error(c, 401, "invalid token", nil)
+		return response.ErrorDetail(c, 401, "invalid token", err)
 	}
 
 	var userID int64
@@ -60,8 +60,8 @@ func AuthMiddleware(c *fiber.Ctx) error {
 		}
 	}
 
-	if userID == 0 {
-		return response.Error(c, 401, "invalid token claims", nil)
+	if userID == 0 || tokenIssuedAt == 0 {
+		return response.Error(c, 401, "invalid token claims", fiber.Map{"detail": "user_id and iat claims are required"})
 	}
 
 	// Check user active status, approval status, and last logout time in database
@@ -72,9 +72,9 @@ func AuthMiddleware(c *fiber.Ctx) error {
 	err = database.DB.QueryRow(query, userID).Scan(&isActive, &approvalStatus, &lastLogoutAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return response.Error(c, 401, "user not found", nil)
+			return response.ErrorDetail(c, 401, "user not found", err)
 		}
-		return response.Error(c, 500, "database error", nil)
+		return response.ErrorDetail(c, 500, "database error while validating authentication", err)
 	}
 
 	if !isActive || approvalStatus != "approved" {

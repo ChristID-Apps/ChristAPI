@@ -1,24 +1,24 @@
 package points
 
 import (
-	"christ-api/pkg/database"
 	"database/sql"
-	"errors"
 )
 
-type Repository struct{}
+type Repository struct {
+	DB *sql.DB
+}
 
 func (r *Repository) GetBalance(userID int64, siteID *int64) (int64, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return 0, sql.ErrConnDone
 	}
 
 	var balance int64
 	var err error
 	if siteID != nil {
-		err = database.DB.QueryRow(`SELECT points_balance FROM users WHERE id = $1 AND site_id = $2 LIMIT 1`, userID, siteID).Scan(&balance)
+		err = r.DB.QueryRow(`SELECT points_balance FROM users WHERE id = $1 AND site_id = $2 LIMIT 1`, userID, *siteID).Scan(&balance)
 	} else {
-		err = database.DB.QueryRow(`SELECT points_balance FROM users WHERE id = $1 LIMIT 1`, userID).Scan(&balance)
+		err = r.DB.QueryRow(`SELECT points_balance FROM users WHERE id = $1 LIMIT 1`, userID).Scan(&balance)
 	}
 	if err != nil {
 		return 0, err
@@ -28,7 +28,7 @@ func (r *Repository) GetBalance(userID int64, siteID *int64) (int64, error) {
 }
 
 func (r *Repository) GetHistory(userID int64, siteID *int64, offset, limit int) ([]LedgerEntry, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
 	if offset < 0 {
@@ -41,15 +41,15 @@ func (r *Repository) GetHistory(userID int64, siteID *int64, offset, limit int) 
 	var rows *sql.Rows
 	var err error
 	if siteID != nil {
-		rows, err = database.DB.Query(`
+		rows, err = r.DB.Query(`
 			SELECT l.id, l.user_id, l.change_amount, l.balance_after, l.reason, l.reference_id, l.created_at
 			FROM user_points_ledger l
 			JOIN users u ON u.id = l.user_id
 			WHERE l.user_id = $1 AND u.site_id = $2
 			ORDER BY l.id DESC
-			LIMIT $3 OFFSET $4`, userID, siteID, limit, offset)
+			LIMIT $3 OFFSET $4`, userID, *siteID, limit, offset)
 	} else {
-		rows, err = database.DB.Query(`
+		rows, err = r.DB.Query(`
 			SELECT id, user_id, change_amount, balance_after, reason, reference_id, created_at
 			FROM user_points_ledger
 			WHERE user_id = $1
@@ -87,11 +87,11 @@ func (r *Repository) GetHistory(userID int64, siteID *int64, offset, limit int) 
 }
 
 func (r *Repository) applyDelta(userID, delta int64, reason string, referenceID *string) (*LedgerEntry, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
 
-	tx, err := database.DB.Begin()
+	tx, err := r.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (r *Repository) applyDelta(userID, delta int64, reason string, referenceID 
 	newBalance := current + delta
 	if newBalance < 0 {
 		rollback()
-		return nil, errors.New("insufficient points")
+		return nil, ErrInsufficientPoints
 	}
 
 	if _, err := tx.Exec(`UPDATE users SET points_balance = $1, updated_at = NOW() WHERE id = $2`, newBalance, userID); err != nil {
@@ -157,7 +157,7 @@ func (r *Repository) Spend(userID, amount int64, reason string, referenceID *str
 }
 
 func (r *Repository) ListBalances(siteID *int64, offset, limit int) ([]UserBalance, error) {
-	if database.DB == nil {
+	if r == nil || r.DB == nil {
 		return nil, sql.ErrConnDone
 	}
 	if offset < 0 {
@@ -170,14 +170,14 @@ func (r *Repository) ListBalances(siteID *int64, offset, limit int) ([]UserBalan
 	var rows *sql.Rows
 	var err error
 	if siteID != nil {
-		rows, err = database.DB.Query(`
+		rows, err = r.DB.Query(`
 			SELECT id, email, points_balance, site_id
 			FROM users
 			WHERE site_id = $1
 			ORDER BY points_balance DESC, id ASC
-			LIMIT $2 OFFSET $3`, siteID, limit, offset)
+			LIMIT $2 OFFSET $3`, *siteID, limit, offset)
 	} else {
-		rows, err = database.DB.Query(`
+		rows, err = r.DB.Query(`
 			SELECT id, email, points_balance, site_id
 			FROM users
 			ORDER BY points_balance DESC, id ASC
