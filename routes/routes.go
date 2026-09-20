@@ -9,6 +9,7 @@ import (
 	"christ-api/internal/middleware"
 	"christ-api/internal/news"
 	"christ-api/internal/points"
+	"christ-api/internal/rewards"
 	"christ-api/internal/role"
 	"christ-api/internal/sites"
 	"christ-api/internal/streaks"
@@ -28,6 +29,7 @@ func Setup(app *fiber.App) {
 	attendanceHandler := attendance.NewHandler(&attendance.Repository{DB: database.DB})
 	streakHandler := streaks.NewHandler(&streaks.Repository{DB: database.DB})
 	newsHandler := news.NewHandler(&news.NewsRepository{DB: database.DB})
+	rewardsHandler := rewards.NewHandler(&rewards.Repository{DB: database.DB})
 	sitesHandler := sites.NewHandler(&sites.SiteRepository{DB: database.DB})
 	bibleHandler := bible.NewHandler(&bible.BibleRepository{DB: database.DB})
 
@@ -90,6 +92,14 @@ func Setup(app *fiber.App) {
 	// points (admin only)
 	adminRoutes.Get("/points", pointsHandler.Get)
 	adminRoutes.Post("/points/earn", pointsHandler.Earn)
+	adminRoutes.Get("/rewards", rewardsHandler.AdminList)
+	adminRoutes.Post("/rewards", rewardsHandler.Create)
+	adminRoutes.Patch("/rewards/:uuid", rewardsHandler.Update)
+	adminRoutes.Post("/rewards/:uuid/image", rewardsHandler.UploadImage)
+	adminRoutes.Get("/reward-redemptions", rewardsHandler.AdminRedemptions)
+	adminRoutes.Post("/reward-redemptions/:uuid/approve", rewardsHandler.Approve)
+	adminRoutes.Post("/reward-redemptions/:uuid/reject", rewardsHandler.Reject)
+	adminRoutes.Post("/reward-redemptions/:uuid/complete", rewardsHandler.Complete)
 
 	// streaks (admin only)
 	adminRoutes.Post("/news", newsHandler.Create)
@@ -109,6 +119,9 @@ func Setup(app *fiber.App) {
 	// points
 	protected.Get("/points", pointsHandler.Get)
 	protected.Post("/points/spend", pointsHandler.Spend)
+	protected.Get("/rewards", rewardsHandler.List)
+	protected.Post("/rewards/:uuid/redeem", rewardsHandler.Redeem)
+	protected.Get("/reward-redemptions/me", rewardsHandler.MyRedemptions)
 
 	// attendance
 	protected.Post("/attendance/check-in", attendanceHandler.CheckIn)
