@@ -2,6 +2,7 @@ package routes
 
 import (
 	"christ-api/internal/activities"
+	"christ-api/internal/activitysubmissions"
 	"christ-api/internal/attendance"
 	"christ-api/internal/auth"
 	"christ-api/internal/bible"
@@ -23,6 +24,7 @@ func Setup(app *fiber.App) {
 	authHandler := auth.NewHandler(&auth.AuthRepository{DB: database.DB})
 	contactsHandler := contacts.NewHandler(&contacts.ContactRepository{DB: database.DB})
 	activityHandler := activities.NewHandler(&activities.Repository{DB: database.DB})
+	submissionHandler := activitysubmissions.NewHandler(&activitysubmissions.Repository{DB: database.DB})
 	roleRepository := &role.RoleRepository{DB: database.DB}
 	roleHandler := role.NewHandler(roleRepository)
 	pointsHandler := points.NewHandler(&points.Repository{DB: database.DB})
@@ -77,6 +79,10 @@ func Setup(app *fiber.App) {
 	adminRoutes.Patch("/activities/:uuid", activityHandler.Update)
 	adminRoutes.Delete("/activities/:uuid", activityHandler.Delete)
 	adminRoutes.Post("/activities/:uuid/image", activityHandler.UploadImage)
+	adminRoutes.Patch("/activities/:uuid/bible-config", activityHandler.ConfigureBible)
+	adminRoutes.Get("/activity-submissions", submissionHandler.AdminList)
+	adminRoutes.Post("/activity-submissions/:uuid/approve", submissionHandler.Approve)
+	adminRoutes.Post("/activity-submissions/:uuid/reject", submissionHandler.Reject)
 
 	// sites (admin only)
 	adminRoutes.Post("/sites", sitesHandler.Create)
@@ -110,6 +116,8 @@ func Setup(app *fiber.App) {
 	protected.Get("/activity-categories", activityHandler.Categories)
 	protected.Get("/activities", activityHandler.List)
 	protected.Get("/activities/:uuid", activityHandler.Get)
+	protected.Post("/activities/:uuid/submit", submissionHandler.Submit)
+	protected.Get("/activity-submissions/me", submissionHandler.Mine)
 
 	// sites
 	protected.Get("/sites", sitesHandler.List)

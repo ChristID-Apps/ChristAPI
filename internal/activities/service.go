@@ -76,6 +76,16 @@ func (s *Service) UpdateImage(uuid, imageURL string) error {
 	return s.Repo.UpdateImage(uuid, imageURL)
 }
 
+func (s *Service) UpsertBibleConfig(uuid string, req *requests.BibleActivityRequest) error {
+	if req.VersionCode == "" || req.BookCode == "" || req.StartChapter < 1 || req.StartVerse < 1 || req.EndChapter < 1 || req.EndVerse < 1 {
+		return errors.New("valid Bible version, book, chapter, and verse range are required")
+	}
+	if req.RequiresReflection && req.ReflectionMinLength < 1 {
+		return errors.New("reflection_min_length must be greater than 0")
+	}
+	return s.Repo.UpsertBibleConfig(uuid, req)
+}
+
 func validateRequest(req *requests.CreateActivityRequest) error {
 	if strings.TrimSpace(req.Title) == "" {
 		return errors.New("title is required")

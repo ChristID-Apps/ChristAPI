@@ -52,10 +52,13 @@ func (r *Repository) List(filter ActivityFilter) ([]Activity, error) {
 			s.id, s.frequency, s.interval_value, s.days_of_week, s.day_of_month,
 			s.start_date, s.end_date, s.start_time, s.end_time, s.timezone,
 			o.id, o.starts_at, o.ends_at, o.location, o.status, o.notes
+			, b.version_code, b.book_code, b.start_chapter, b.start_verse, b.end_chapter, b.end_verse,
+			 b.requires_reflection, b.reflection_prompt, b.reflection_min_length
 		FROM activities a
 		JOIN activity_categories ac ON ac.id = a.category_id
 		LEFT JOIN activity_schedules s ON s.activity_id = a.id
 		LEFT JOIN activity_occurrences o ON o.activity_id = a.id
+		LEFT JOIN activity_bible_configs b ON b.activity_id = a.id
 		WHERE a.deleted_at IS NULL`
 	args := make([]interface{}, 0, 6)
 	argIndex := 1
@@ -165,6 +168,12 @@ func (r *Repository) Create(req *requests.CreateActivityRequest, createdBy *int6
 			return nil, err
 		}
 	}
+	if req.BibleConfig != nil {
+		if _, err := tx.Exec(`INSERT INTO activity_bible_configs (activity_id, version_code, book_code, start_chapter, start_verse, end_chapter, end_verse, requires_reflection, reflection_prompt, reflection_min_length) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, id, req.BibleConfig.VersionCode, req.BibleConfig.BookCode, req.BibleConfig.StartChapter, req.BibleConfig.StartVerse, req.BibleConfig.EndChapter, req.BibleConfig.EndVerse, req.BibleConfig.RequiresReflection, req.BibleConfig.ReflectionPrompt, req.BibleConfig.ReflectionMinLength); err != nil {
+			rollback()
+			return nil, err
+		}
+	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -187,6 +196,16 @@ func (r *Repository) UpdateImage(uuid, imageURL string) error {
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (r *Repository) UpsertBibleConfig(uuid string, req *requests.BibleActivityRequest) error {
+	var activityID int64
+	err := r.DB.QueryRow(`
+		INSERT INTO activity_bible_configs (activity_id, version_code, book_code, start_chapter, start_verse, end_chapter, end_verse, requires_reflection, reflection_prompt, reflection_min_length)
+		SELECT id, $2, $3, $4, $5, $6, $7, $8, $9, $10 FROM activities WHERE uuid = $1 AND deleted_at IS NULL
+		ON CONFLICT (activity_id) DO UPDATE SET version_code = EXCLUDED.version_code, book_code = EXCLUDED.book_code, start_chapter = EXCLUDED.start_chapter, start_verse = EXCLUDED.start_verse, end_chapter = EXCLUDED.end_chapter, end_verse = EXCLUDED.end_verse, requires_reflection = EXCLUDED.requires_reflection, reflection_prompt = EXCLUDED.reflection_prompt, reflection_min_length = EXCLUDED.reflection_min_length
+		RETURNING activity_id`, uuid, req.VersionCode, req.BookCode, req.StartChapter, req.StartVerse, req.EndChapter, req.EndVerse, req.RequiresReflection, req.ReflectionPrompt, req.ReflectionMinLength).Scan(&activityID)
+	return err
 }
 
 func (r *Repository) Update(uuid string, req *requests.UpdateActivityRequest) (*Activity, error) {
@@ -324,11 +343,15 @@ func scanActivity(row interface{ Scan(...interface{}) error }) (*Activity, error
 	var occurrenceID sql.NullInt64
 	var startsAt, endsAt sql.NullTime
 	var location, occurrenceStatus, notes sql.NullString
+	var bibleVersion, bibleBook, biblePrompt sql.NullString
+	var bibleStartChapter, bibleStartVerse, bibleEndChapter, bibleEndVerse, bibleMinLength sql.NullInt64
+	var bibleReflection sql.NullBool
 
 	err := row.Scan(&a.ID, &a.UUID, &a.Title, &description, &imageURL, &a.CategoryID, &a.CategoryCode, &a.CategoryName,
 		&a.ActivityType, &siteID, &createdBy, &a.Status, &maxParticipants, &a.RequiresRegistration, &streakEnabled, &streakType, &streakPoints, &createdAt, &updatedAt,
 		&scheduleID, &frequency, &intervalValue, &daysJSON, &dayOfMonth, &scheduleStartDate, &endDate, &startTime, &endTime, &timezone,
-		&occurrenceID, &startsAt, &endsAt, &location, &occurrenceStatus, &notes)
+		&occurrenceID, &startsAt, &endsAt, &location, &occurrenceStatus, &notes,
+		&bibleVersion, &bibleBook, &bibleStartChapter, &bibleStartVerse, &bibleEndChapter, &bibleEndVerse, &bibleReflection, &biblePrompt, &bibleMinLength)
 	if err != nil {
 		return nil, err
 	}
@@ -360,6 +383,9 @@ func scanActivity(row interface{ Scan(...interface{}) error }) (*Activity, error
 	}
 	if updatedAt.Valid {
 		a.UpdatedAt = &updatedAt.Time
+	}
+	if bibleVersion.Valid {
+		a.BibleConfig = &BibleActivityConfig{VersionCode: bibleVersion.String, BookCode: bibleBook.String, StartChapter: int(bibleStartChapter.Int64), StartVerse: int(bibleStartVerse.Int64), EndChapter: int(bibleEndChapter.Int64), EndVerse: int(bibleEndVerse.Int64), RequiresReflection: bibleReflection.Bool, ReflectionPrompt: biblePrompt.String, ReflectionMinLength: int(bibleMinLength.Int64)}
 	}
 	if scheduleID.Valid {
 		s := &ActivitySchedule{ID: scheduleID.Int64, Frequency: frequency.String, IntervalValue: int(intervalValue.Int64), StartDate: scheduleStartDate.String, Timezone: timezone.String}

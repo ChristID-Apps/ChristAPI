@@ -3,27 +3,40 @@ package activities
 import "time"
 
 type Activity struct {
-	ID                   int64               `json:"id"`
-	UUID                 string              `json:"uuid"`
-	Title                string              `json:"title"`
-	Description          *string             `json:"description,omitempty"`
-	ImageURL             *string             `json:"image_url,omitempty"`
-	CategoryID           int64               `json:"category_id"`
-	CategoryCode         string              `json:"category_code"`
-	CategoryName         string              `json:"category_name"`
-	ActivityType         string              `json:"activity_type"`
-	SiteID               *int64              `json:"site_id,omitempty"`
-	CreatedBy            *int64              `json:"created_by,omitempty"`
-	Status               string              `json:"status"`
-	MaxParticipants      *int                `json:"max_participants,omitempty"`
-	RequiresRegistration bool                `json:"requires_registration"`
-	StreakEnabled        bool                `json:"streak_enabled"`
-	StreakType           *string             `json:"streak_type,omitempty"`
-	StreakPoints         int64               `json:"streak_points"`
-	Schedule             *ActivitySchedule   `json:"schedule,omitempty"`
-	Occurrence           *ActivityOccurrence `json:"occurrence,omitempty"`
-	CreatedAt            *time.Time          `json:"created_at,omitempty"`
-	UpdatedAt            *time.Time          `json:"updated_at,omitempty"`
+	ID                   int64                `json:"id"`
+	UUID                 string               `json:"uuid"`
+	Title                string               `json:"title"`
+	Description          *string              `json:"description,omitempty"`
+	ImageURL             *string              `json:"image_url,omitempty"`
+	CategoryID           int64                `json:"category_id"`
+	CategoryCode         string               `json:"category_code"`
+	CategoryName         string               `json:"category_name"`
+	ActivityType         string               `json:"activity_type"`
+	SiteID               *int64               `json:"site_id,omitempty"`
+	CreatedBy            *int64               `json:"created_by,omitempty"`
+	Status               string               `json:"status"`
+	MaxParticipants      *int                 `json:"max_participants,omitempty"`
+	RequiresRegistration bool                 `json:"requires_registration"`
+	StreakEnabled        bool                 `json:"streak_enabled"`
+	StreakType           *string              `json:"streak_type,omitempty"`
+	StreakPoints         int64                `json:"streak_points"`
+	Schedule             *ActivitySchedule    `json:"schedule,omitempty"`
+	Occurrence           *ActivityOccurrence  `json:"occurrence,omitempty"`
+	CreatedAt            *time.Time           `json:"created_at,omitempty"`
+	UpdatedAt            *time.Time           `json:"updated_at,omitempty"`
+	BibleConfig          *BibleActivityConfig `json:"bible_config,omitempty"`
+}
+
+type BibleActivityConfig struct {
+	VersionCode         string `json:"version_code"`
+	BookCode            string `json:"book_code"`
+	StartChapter        int    `json:"start_chapter"`
+	StartVerse          int    `json:"start_verse"`
+	EndChapter          int    `json:"end_chapter"`
+	EndVerse            int    `json:"end_verse"`
+	RequiresReflection  bool   `json:"requires_reflection"`
+	ReflectionPrompt    string `json:"reflection_prompt,omitempty"`
+	ReflectionMinLength int    `json:"reflection_min_length"`
 }
 
 type ActivitySchedule struct {

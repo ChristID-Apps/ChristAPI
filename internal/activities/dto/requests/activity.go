@@ -26,19 +26,32 @@ type OccurrenceRequest struct {
 }
 
 type CreateActivityRequest struct {
-	Title                string             `json:"title"`
-	Description          *string            `json:"description"`
-	CategoryID           int64              `json:"category_id"`
-	ActivityType         string             `json:"activity_type"`
-	SiteID               *int64             `json:"site_id"`
-	Status               string             `json:"status"`
-	MaxParticipants      *int               `json:"max_participants"`
-	RequiresRegistration bool               `json:"requires_registration"`
-	StreakEnabled        bool               `json:"streak_enabled"`
-	StreakType           *string            `json:"streak_type"`
-	StreakPoints         int64              `json:"streak_points"`
-	Schedule             *ScheduleRequest   `json:"schedule"`
-	Occurrence           *OccurrenceRequest `json:"occurrence"`
+	Title                string                `json:"title"`
+	Description          *string               `json:"description"`
+	CategoryID           int64                 `json:"category_id"`
+	ActivityType         string                `json:"activity_type"`
+	SiteID               *int64                `json:"site_id"`
+	Status               string                `json:"status"`
+	MaxParticipants      *int                  `json:"max_participants"`
+	RequiresRegistration bool                  `json:"requires_registration"`
+	StreakEnabled        bool                  `json:"streak_enabled"`
+	StreakType           *string               `json:"streak_type"`
+	StreakPoints         int64                 `json:"streak_points"`
+	Schedule             *ScheduleRequest      `json:"schedule"`
+	Occurrence           *OccurrenceRequest    `json:"occurrence"`
+	BibleConfig          *BibleActivityRequest `json:"bible_config"`
+}
+
+type BibleActivityRequest struct {
+	VersionCode         string `json:"version_code"`
+	BookCode            string `json:"book_code"`
+	StartChapter        int    `json:"start_chapter"`
+	StartVerse          int    `json:"start_verse"`
+	EndChapter          int    `json:"end_chapter"`
+	EndVerse            int    `json:"end_verse"`
+	RequiresReflection  bool   `json:"requires_reflection"`
+	ReflectionPrompt    string `json:"reflection_prompt"`
+	ReflectionMinLength int    `json:"reflection_min_length"`
 }
 
 type UpdateActivityRequest struct {
