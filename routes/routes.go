@@ -2,6 +2,7 @@ package routes
 
 import (
 	"christ-api/internal/activities"
+	"christ-api/internal/attendance"
 	"christ-api/internal/auth"
 	"christ-api/internal/bible"
 	"christ-api/internal/contacts"
@@ -24,6 +25,7 @@ func Setup(app *fiber.App) {
 	roleRepository := &role.RoleRepository{DB: database.DB}
 	roleHandler := role.NewHandler(roleRepository)
 	pointsHandler := points.NewHandler(&points.Repository{DB: database.DB})
+	attendanceHandler := attendance.NewHandler(&attendance.Repository{DB: database.DB})
 	streakHandler := streaks.NewHandler(&streaks.Repository{DB: database.DB})
 	newsHandler := news.NewHandler(&news.NewsRepository{DB: database.DB})
 	sitesHandler := sites.NewHandler(&sites.SiteRepository{DB: database.DB})
@@ -107,6 +109,13 @@ func Setup(app *fiber.App) {
 	// points
 	protected.Get("/points", pointsHandler.Get)
 	protected.Post("/points/spend", pointsHandler.Spend)
+
+	// attendance
+	protected.Post("/attendance/check-in", attendanceHandler.CheckIn)
+	protected.Get("/attendance/me", attendanceHandler.GetMyHistory)
+	protected.Get("/attendance/summary", attendanceHandler.GetMySummary)
+	adminRoutes.Get("/attendance", attendanceHandler.AdminReport)
+	adminRoutes.Get("/attendance/summary", attendanceHandler.AdminSummary)
 
 	// streaks
 	protected.Get("/streaks", streakHandler.List)
