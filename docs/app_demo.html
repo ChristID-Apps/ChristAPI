@@ -548,15 +548,81 @@
             const admin = isAdmin();
             root.innerHTML = `<div class="app-shell">
         <aside class="sidebar"><span class="brand">ChristAPI</span><nav class="nav">
-            <button data-page="dashboard">Dashboard</button><button data-page="activities">Activities</button><button data-page="points">Points</button><button data-page="news">News</button>${admin ? '<button data-page="contacts">Contacts</button><button data-page="admin">Admin</button>' : ''}
+            <button data-page="dashboard">Dashboard</button><button data-page="bible">Bible</button><button data-page="activities">Activities</button><button data-page="points">Points</button><button data-page="news">News</button>${admin ? '<button data-page="contacts">Contacts</button><button data-page="admin">Admin</button>' : ''}
         </nav><div class="sidebar-bottom"><button class="secondary" style="width:100%" onclick="logout()">Keluar</button></div></aside>
         <main class="main"><header class="topbar"><strong id="top-title">Dashboard</strong><div class="user-chip">${esc(user?.email)}<br><span class="role-label">Role: ${esc(user?.role || "User")}</span><br><span>${user?.points ?? 0} point</span></div></header><section class="content"><div id="page-notice" class="notice hidden"></div><div id="page-content"></div></section></main>
     </div>`;
             document.querySelectorAll("[data-page]").forEach(button => button.onclick = () => navigate(button.dataset.page));
             navigate(currentPage);
         }
-        function navigate(page) { currentPage = page; document.querySelectorAll("[data-page]").forEach(button => button.classList.toggle("active", button.dataset.page === page)); document.getElementById("top-title").textContent = page[0].toUpperCase() + page.slice(1); ({ dashboard: loadDashboard, activities: loadActivities, points: loadPoints, contacts: loadContacts, news: loadNews, admin: loadAdmin }[page] || loadDashboard)(); }
+        function navigate(page) { currentPage = page; document.querySelectorAll("[data-page]").forEach(button => button.classList.toggle("active", button.dataset.page === page)); document.getElementById("top-title").textContent = page[0].toUpperCase() + page.slice(1); ({ dashboard: loadDashboard, bible: loadBible, activities: loadActivities, points: loadPoints, contacts: loadContacts, news: loadNews, admin: loadAdmin }[page] || loadDashboard)(); }
         async function logout() { try { await api("/logout", { method: "POST" }); } catch (_) { } clearSession(); }
+
+        async function loadBible() {
+            const content = document.getElementById("page-content");
+            content.innerHTML = pageHead("Bible", "Baca ayat dan cari firman berdasarkan versi, kitab, pasal, atau Perjanjian.") + `
+                <div class="card"><div class="toolbar">
+                    <div><label>Versi</label><select id="bible-version" onchange="loadBibleBooks()"><option value="tb">Memuat versi...</option></select></div>
+                    <div><label>Perjanjian</label><select id="bible-testament" onchange="loadBibleBooks()"><option value="">Semua</option><option value="PL">Perjanjian Lama</option><option value="PB">Perjanjian Baru</option></select></div>
+                    <div><label>Kitab</label><select id="bible-book"><option value="">Memuat kitab...</option></select></div>
+                    <div><label>Pasal</label><input id="bible-chapter" type="number" min="1" value="1"></div>
+                    <button onclick="readBibleChapter()">Baca pasal</button>
+                </div></div><br>
+                <div class="card"><div class="toolbar">
+                    <div><label>Cari ayat</label><input id="bible-search" placeholder="Contoh: kasih"></div>
+                    <div><label>Filter kitab (opsional)</label><select id="bible-search-book"><option value="">Semua kitab</option></select></div>
+                    <button onclick="searchBible()">Cari</button>
+                </div></div><br>
+                <div id="bible-view"><div class="card muted">Pilih kitab dan pasal untuk mulai membaca.</div></div>`;
+            try {
+                const result = await api("/bible/versions");
+                const versions = result.data || [];
+                const versionSelect = document.getElementById("bible-version");
+                versionSelect.innerHTML = versions.map(item => `<option value="${esc(item.code)}">${esc(item.name)} (${esc(item.code.toUpperCase())})</option>`).join("") || '<option value="tb">TB</option>';
+                await loadBibleBooks();
+            } catch (error) { showNotice(error.message, "error"); }
+        }
+
+        async function loadBibleBooks() {
+            const version = field("bible-version") || "tb";
+            const testament = field("bible-testament");
+            try {
+                const result = await api(`/bible/books?version=${encodeURIComponent(version)}${testament ? `&testament=${encodeURIComponent(testament)}` : ""}`);
+                const books = result.data || [];
+                const options = books.map(item => `<option value="${esc(item.code)}">${esc(item.name)} (${esc(item.code)})</option>`).join("");
+                document.getElementById("bible-book").innerHTML = options || '<option value="">Tidak ada kitab</option>';
+                document.getElementById("bible-search-book").innerHTML = '<option value="">Semua kitab</option>' + options;
+            } catch (error) { showNotice(error.message, "error"); }
+        }
+
+        async function readBibleChapter() {
+            const version = field("bible-version") || "tb";
+            const book = field("bible-book");
+            const chapter = Number(field("bible-chapter"));
+            if (!book || !Number.isInteger(chapter) || chapter < 1) return showNotice("Pilih kitab dan pasal yang valid.", "error");
+            try {
+                const result = await api(`/bible/${encodeURIComponent(version)}/${encodeURIComponent(book)}/${chapter}`);
+                const data = result.data || {};
+                const verses = data.verses || [];
+                document.getElementById("bible-view").innerHTML = `<div class="card"><h2>${esc(data.book?.name || book)} ${esc(data.chapter || chapter)}</h2><p class="muted">${esc(data.version?.name || version)} · ${esc(data.book?.testament || "")}</p>${verses.map(item => `<p><b>${esc(item.verse)}</b> ${esc(item.text)}</p>`).join("") || '<p class="muted">Pasal tidak memiliki ayat.</p>'}</div>`;
+            } catch (error) { showNotice(error.message, "error"); }
+        }
+
+        async function searchBible() {
+            const query = field("bible-search");
+            if (!query) return showNotice("Masukkan kata yang ingin dicari.", "error");
+            const version = field("bible-version") || "tb";
+            const testament = field("bible-testament");
+            const book = field("bible-search-book");
+            try {
+                const params = new URLSearchParams({ q: query });
+                if (testament) params.set("testament", testament);
+                if (book) params.set("book", book);
+                const result = await api(`/bible/${encodeURIComponent(version)}/search?${params}`);
+                const items = result.data || [];
+                document.getElementById("bible-view").innerHTML = `<div class="card"><h2>Hasil pencarian</h2><p class="muted">${items.length} ayat ditemukan untuk “${esc(query)}”.</p>${items.map(item => `<p><b>${esc(item.book?.name)} ${esc(item.chapter)}:${esc(item.verse)}</b><br>${esc(item.text)}</p>`).join("") || '<p class="muted">Tidak ada hasil.</p>'}</div>`;
+            } catch (error) { showNotice(error.message, "error"); }
+        }
 
         async function loadDashboard() {
             const content = document.getElementById("page-content"); content.innerHTML = pageHead("Dashboard", "Ringkasan akun dan aktivitas Anda.");
