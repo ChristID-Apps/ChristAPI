@@ -56,7 +56,6 @@ func (h *Handler) CheckIn(c *fiber.Ctx) error {
 	return response.Success(c, "Check-in successful", record)
 }
 
-
 func parseDateOrEmpty(raw string) string {
 	if raw == "" {
 		return ""
