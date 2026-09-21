@@ -333,6 +333,20 @@ func (h *Handler) UploadImage(c *fiber.Ctx) error {
 	return response.Success(c, "Activity image uploaded", fiber.Map{"image_url": imageURL})
 }
 
+func (h *Handler) ConfigureBible(c *fiber.Ctx) error {
+	var req requests.BibleActivityRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.ErrorDetail(c, 422, "Invalid Bible activity configuration", err)
+	}
+	if err := h.service.UpsertBibleConfig(c.Params("uuid"), &req); err != nil {
+		if isNotFound(err) {
+			return response.Error(c, 404, "Activity not found", nil)
+		}
+		return response.Error(c, 422, err.Error(), nil)
+	}
+	return response.Success(c, "Bible activity configured", nil)
+}
+
 func activityError(c *fiber.Ctx, err error, fallback string) error {
 	if isNotFound(err) {
 		return response.ErrorDetail(c, 404, "Activity not found", err)
