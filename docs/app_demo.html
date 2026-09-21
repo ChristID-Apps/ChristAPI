@@ -1022,6 +1022,7 @@
          * ===================================================================== */
         const ROUTES = {
             dashboard: { label: "Beranda", icon: "home", group: "Kegiatan saya", title: "Beranda", subtitle: "Ringkasan point, streak, dan kegiatan terdekat.", render: pageDashboard },
+            profile: { label: "Profil saya", icon: "users", group: "Akun", title: "Profil saya", subtitle: "Kelola data profil yang boleh Anda ubah.", render: pageProfile },
             bible: { label: "Alkitab", icon: "book", group: "Kegiatan saya", title: "Alkitab", subtitle: "Baca per pasal atau cari ayat berdasarkan versi dan kitab.", render: pageBible },
             activities: { label: "Kegiatan", icon: "calendar", group: "Kegiatan saya", title: "Kegiatan", subtitle: "Jadwal gereja, absensi, dan bacaan Alkitab bertugas.", render: pageActivities },
             tasks: { label: "Renungan saya", icon: "check", group: "Kegiatan saya", title: "Renungan saya", subtitle: "Status bacaan dan kesimpulan yang sudah Anda kirim.", render: pageSubmissions },
@@ -1148,6 +1149,66 @@
         /* =======================================================================
          * 12. Beranda
          * ===================================================================== */
+        async function pageProfile(seq) {
+            try {
+                const profile = dataOf(await api("/profile"));
+                if (seq !== state.seq) return;
+                const photo = profile.profile_photo_url
+                    ? '<img src="' + h(mediaURL(profile.profile_photo_url)) + '" alt="Foto profil" style="width:88px;height:88px;object-fit:cover;border-radius:50%;border:1px solid var(--line)">'
+                    : '<div style="width:88px;height:88px;border-radius:50%;display:grid;place-items:center;background:var(--brand-soft);color:var(--brand);font-size:28px;font-weight:800">' + h(String(profile.full_name || profile.email || "?").trim().slice(0, 1).toUpperCase()) + "</div>";
+                paint(seq, head(ROUTES.profile) +
+                    '<div class="grid g2">' +
+                    '<form class="card stack" data-act="profile-save" novalidate>' +
+                    '<div class="row" style="align-items:center">' + photo + '<div><h2>Data yang bisa diubah</h2><p class="muted small" style="margin:4px 0 0">Email, role, status, point, dan site dikelola sistem.</p></div></div>' +
+                    field({ id: "profile-name", label: "Nama lengkap", value: profile.full_name || "", attrs: "required autocomplete=name" }) +
+                    '<div class="grid g2">' +
+                    field({ id: "profile-phone", label: "Nomor telepon", type: "tel", value: profile.phone || "", attrs: "autocomplete=tel" }) +
+                    field({ id: "profile-image", label: "Foto profil", type: "file", attrs: 'accept="image/jpeg,image/png,image/webp"' }) +
+                    "</div>" +
+                    field({ id: "profile-address", label: "Alamat", type: "textarea", value: profile.address || "" }) +
+                    '<button class="btn" type="submit" data-busy-label="Menyimpan profil...">Simpan perubahan</button>' +
+                    "</form>" +
+                    '<div class="card stack"><h2>Data akun</h2>' +
+                    field({ id: "profile-email", label: "Email", value: profile.email || "", attrs: "readonly" }) +
+                    field({ id: "profile-role", label: "Role", value: profile.role || "Jemaat", attrs: "readonly" }) +
+                    field({ id: "profile-status", label: "Status akun", value: profile.is_active ? "Aktif" : "Tidak aktif", attrs: "readonly" }) +
+                    field({ id: "profile-points", label: "Point", value: num(profile.points), attrs: "readonly" }) +
+                    field({ id: "profile-site", label: "Site ID", value: profile.site_id ?? "-", attrs: "readonly" }) +
+                    "</div></div>");
+            } catch (error) {
+                paint(seq, head(ROUTES.profile) + '<div class="card">' + emptyState("Profil gagal dimuat", error.message) + "</div>");
+            }
+        }
+
+        ACTIONS["profile-save"] = async (_data, form) => {
+            const fullName = val("profile-name");
+            if (!fullName) return toast("Nama lengkap wajib diisi.", "warn");
+            await withBusy($("button[type=submit]", form), async () => {
+                try {
+                    const result = dataOf(await api("/profile", {
+                        method: "PATCH",
+                        body: JSON.stringify({
+                            full_name: fullName,
+                            phone: val("profile-phone") || null,
+                            address: val("profile-address") || null
+                        })
+                    }));
+                    const image = fileOf("profile-image");
+                    if (image) {
+                        try {
+                            await uploadImage("/profile/photo", image);
+                        } catch (error) {
+                            toast("Data profil tersimpan, tetapi foto gagal diunggah: " + error.message, "warn");
+                        }
+                    }
+                    state.user = { ...(state.user || {}), full_name: result.full_name, points: result.points, role: result.role };
+                    store(STORAGE.user, JSON.stringify(state.user));
+                    toast("Profil berhasil diperbarui.");
+                    renderRoute("profile");
+                } catch (error) { toastError(error); }
+            });
+        };
+
         async function refreshPoints() {
             if (!state.user?.id) return;
             try {
