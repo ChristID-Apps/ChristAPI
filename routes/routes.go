@@ -54,11 +54,9 @@ func Setup(app *fiber.App) {
 	// protected routes
 	protected := api.Group("/", middleware.AuthMiddleware)
 
-	protected.Get("/profile", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"message": "you are logged in",
-		})
-	})
+	protected.Get("/profile", contactsHandler.MyProfile)
+	protected.Patch("/profile", contactsHandler.UpdateMyProfile)
+	protected.Post("/profile/photo", contactsHandler.UploadProfilePhoto)
 
 	protected.Post("/logout", authHandler.Logout)
 
