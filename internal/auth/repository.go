@@ -102,7 +102,7 @@ func (r *AuthRepository) CreateUser(email, passwordHash string, roleID, siteID, 
 		return nil, sql.ErrConnDone
 	}
 
-	query := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, auth_provider, approval_status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, FALSE, 'credentials', 'pending_otp', NOW(), NOW()) RETURNING id, uuid, email, username, password_hash, google_id, auth_provider, approval_status, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
+	query := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, auth_provider, approval_status, created_at, updated_at) VALUES ($1, $2, COALESCE($3, (SELECT id FROM roles WHERE code = 'public' LIMIT 1)), $4, $5, FALSE, 'credentials', 'pending_otp', NOW(), NOW()) RETURNING id, uuid, email, username, password_hash, google_id, auth_provider, approval_status, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
 	return r.scanUser(r.DB.QueryRow(query, email, passwordHash, roleID, siteID, contactID))
 }
 
@@ -111,7 +111,7 @@ func (r *AuthRepository) CreateGoogleUser(email, googleID string, roleID, siteID
 		return nil, sql.ErrConnDone
 	}
 
-	query := `INSERT INTO users (email, google_id, role_id, site_id, contact_id, is_active, auth_provider, approval_status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, FALSE, 'google', 'pending_username', NOW(), NOW()) RETURNING id, uuid, email, username, password_hash, google_id, auth_provider, approval_status, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
+	query := `INSERT INTO users (email, google_id, role_id, site_id, contact_id, is_active, auth_provider, approval_status, created_at, updated_at) VALUES ($1, $2, COALESCE($3, (SELECT id FROM roles WHERE code = 'public' LIMIT 1)), $4, $5, FALSE, 'google', 'pending_username', NOW(), NOW()) RETURNING id, uuid, email, username, password_hash, google_id, auth_provider, approval_status, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
 	return r.scanUser(r.DB.QueryRow(query, email, googleID, roleID, siteID, contactID))
 }
 
@@ -140,7 +140,7 @@ func (r *AuthRepository) UpdateStatus(userID int64, newStatus string, isActive b
 		return sql.ErrConnDone
 	}
 
-	query := `UPDATE users SET approval_status = $2, is_active = $3, updated_at = NOW() WHERE id = $1`
+	query := `UPDATE users SET approval_status = $2, is_active = $3, role_id = CASE WHEN $2 = 'approved' THEN COALESCE(role_id, (SELECT id FROM roles WHERE code = 'public' LIMIT 1)) ELSE role_id END, updated_at = NOW() WHERE id = $1`
 	_, err := r.DB.Exec(query, userID, newStatus, isActive)
 	return err
 }
@@ -235,7 +235,7 @@ func (r *AuthRepository) CreateContactAndUser(fullName string, phone *string, ad
 	}
 
 	// insert user with contact_id
-	userQuery := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, auth_provider, approval_status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,FALSE,'credentials','pending_otp',NOW(),NOW()) RETURNING id, uuid, email, username, password_hash, google_id, auth_provider, approval_status, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
+	userQuery := `INSERT INTO users (email, password_hash, role_id, site_id, contact_id, is_active, auth_provider, approval_status, created_at, updated_at) VALUES ($1,$2,COALESCE($3, (SELECT id FROM roles WHERE code = 'public' LIMIT 1)),$4,$5,FALSE,'credentials','pending_otp',NOW(),NOW()) RETURNING id, uuid, email, username, password_hash, google_id, auth_provider, approval_status, role_id, contact_id, is_active, last_login_at, created_at, updated_at, site_id, points_balance`
 	u, err := r.scanUser(tx.QueryRow(userQuery, email, passwordHash, roleID, userSiteID, c.ID))
 	if err != nil {
 		rollback()

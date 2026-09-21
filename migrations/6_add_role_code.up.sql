@@ -9,5 +9,5 @@ INSERT INTO public.roles (name, code, description) VALUES
 ('Super Admin', 'super_admin', 'Full system access'),
 ('Admin', 'admin', 'Administrative access'),
 ('Church Staff', 'church_staff', 'Church staff member'),
-('Public', 'public', 'Public user')
+('Jemaat', 'public', 'Public user')
 ON CONFLICT DO NOTHING;
