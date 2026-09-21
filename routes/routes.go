@@ -3,6 +3,7 @@ package routes
 import (
 	"christ-api/internal/activities"
 	"christ-api/internal/auth"
+	"christ-api/internal/bible"
 	"christ-api/internal/contacts"
 	"christ-api/internal/middleware"
 	"christ-api/internal/news"
@@ -26,8 +27,16 @@ func Setup(app *fiber.App) {
 	streakHandler := streaks.NewHandler(&streaks.Repository{DB: database.DB})
 	newsHandler := news.NewHandler(&news.NewsRepository{DB: database.DB})
 	sitesHandler := sites.NewHandler(&sites.SiteRepository{DB: database.DB})
+	bibleHandler := bible.NewHandler(&bible.BibleRepository{DB: database.DB})
 
 	api := app.Group("/api")
+
+	// Bible read routes
+	api.Get("/bible/versions", bibleHandler.ListVersions)
+	api.Get("/bible/books", bibleHandler.ListBooks)
+	api.Get("/bible/:version/search", bibleHandler.Search)
+	api.Get("/bible/:version/:book/:chapter/:verse", bibleHandler.GetVerse)
+	api.Get("/bible/:version/:book/:chapter", bibleHandler.GetChapter)
 
 	// public auth routes
 	api.Post("/login", authHandler.Login)
@@ -58,19 +67,29 @@ func Setup(app *fiber.App) {
 	adminRoutes.Get("/roles", roleHandler.List)
 	adminRoutes.Post("/roles", roleHandler.Create)
 	adminRoutes.Patch("/roles/:id", roleHandler.Update)
+
+	// activities (admin only)
 	adminRoutes.Post("/activities", activityHandler.Create)
 	adminRoutes.Patch("/activities/:uuid", activityHandler.Update)
 	adminRoutes.Delete("/activities/:uuid", activityHandler.Delete)
 	adminRoutes.Post("/activities/:uuid/image", activityHandler.UploadImage)
+
+	// sites (admin only)
 	adminRoutes.Post("/sites", sitesHandler.Create)
 	adminRoutes.Patch("/sites/:uuid", sitesHandler.Update)
+
+	// contacts (admin only)
 	adminRoutes.Post("/contacts", contactsHandler.Create)
 	adminRoutes.Patch("/contacts/:id", contactsHandler.Update)
 	adminRoutes.Delete("/contacts/:id", contactsHandler.Delete)
 	adminRoutes.Get("/contacts", contactsHandler.List)
 	adminRoutes.Get("/contacts/:id", contactsHandler.List)
+
+	// points (admin only)
 	adminRoutes.Get("/points", pointsHandler.Get)
 	adminRoutes.Post("/points/earn", pointsHandler.Earn)
+
+	// streaks (admin only)
 	adminRoutes.Post("/news", newsHandler.Create)
 	adminRoutes.Patch("/news/:uuid", newsHandler.Update)
 	adminRoutes.Delete("/news/:uuid", newsHandler.Delete)
