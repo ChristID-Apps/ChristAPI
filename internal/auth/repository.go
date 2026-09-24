@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"christ-api/internal/auth/dto/responses"
@@ -140,7 +141,7 @@ func (r *AuthRepository) UpdateStatus(userID int64, newStatus string, isActive b
 		return sql.ErrConnDone
 	}
 
-	query := `UPDATE users SET approval_status = $2, is_active = $3, role_id = CASE WHEN $2 = 'approved' THEN COALESCE(role_id, (SELECT id FROM roles WHERE code = 'public' LIMIT 1)) ELSE role_id END, updated_at = NOW() WHERE id = $1`
+	query := `UPDATE users SET approval_status = $2::varchar, is_active = $3, role_id = CASE WHEN $2::varchar = 'approved' THEN COALESCE(role_id, (SELECT id FROM roles WHERE code = 'public' LIMIT 1)) ELSE role_id END, updated_at = NOW() WHERE id = $1`
 	_, err := r.DB.Exec(query, userID, newStatus, isActive)
 	return err
 }
@@ -253,14 +254,23 @@ func (r *AuthRepository) CreateContactAndUser(fullName string, phone *string, ad
 // SaveOTP saves an OTP to database
 func (r *AuthRepository) SaveOTP(userID int64, otpCode string, expiry time.Time) error {
 	if r == nil || r.DB == nil {
+		log.Printf("otp save failed user_id=%d stage=database reason=connection_closed", userID)
 		return sql.ErrConnDone
 	}
 
 	// Delete old OTPs first
-	_, _ = r.DB.Exec("DELETE FROM user_otps WHERE user_id = $1", userID)
+	if _, err := r.DB.Exec("DELETE FROM user_otps WHERE user_id = $1", userID); err != nil {
+		log.Printf("otp save failed user_id=%d stage=delete_previous error=%v", userID, err)
+		return fmt.Errorf("delete previous otp: %w", err)
+	}
 
 	query := `INSERT INTO user_otps (user_id, otp_code, expired_at) VALUES ($1, $2, $3)`
 	_, err := r.DB.Exec(query, userID, otpCode, expiry)
+	if err != nil {
+		log.Printf("otp save failed user_id=%d stage=insert error=%v", userID, err)
+		return err
+	}
+	log.Printf("otp saved user_id=%d expires_at=%s", userID, expiry.UTC().Format(time.RFC3339))
 	return err
 }
 

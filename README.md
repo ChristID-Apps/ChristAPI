@@ -145,12 +145,11 @@ Setiap fitur di `internal/<feature>/` punya 4 file utama:
 
 **Key Endpoints:**
 ```
-POST   /api/auth/login              → Email/password login
-POST   /api/auth/register           → Register new user
+POST   /api/login                   → Email/password login
+POST   /api/register                → Register new user
 POST   /api/auth/google             → Google OAuth flow
-POST   /api/auth/verify-otp         → Verify OTP
-POST   /api/auth/logout             → Logout
-GET    /api/auth/me                 → Get current user
+POST   /api/verify-otp              → Verify OTP
+POST   /api/resend-otp              → Resend OTP
 ```
 
 ---
@@ -295,14 +294,19 @@ go test ./...
 **Example requests:**
 ```bash
 # Register
-curl -X POST http://localhost:3001/api/auth/register \
+curl -X POST http://localhost:3001/api/register \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com","password":"securepass123"}'
 
 # Login with OTP
-curl -X POST http://localhost:3001/api/auth/verify-otp \
+curl -X POST http://localhost:3001/api/verify-otp \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","otp":"123456"}'
+  -d '{"email":"user@example.com","otp_code":"123456"}'
+
+# Resend OTP
+curl -X POST http://localhost:3001/api/resend-otp \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com"}'
 
 # Get current user (requires JWT token in Authorization header)
 curl -H "Authorization: Bearer <token>" \

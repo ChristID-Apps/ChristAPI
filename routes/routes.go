@@ -48,6 +48,7 @@ func Setup(app *fiber.App) {
 	api.Post("/login", authHandler.Login)
 	api.Post("/register", authHandler.Register)
 	api.Post("/verify-otp", authHandler.VerifyOTP)
+	api.Post("/resend-otp", authHandler.ResendOTP)
 	api.Post("/auth/google", authHandler.LoginGoogle)
 	api.Post("/auth/google/username", authHandler.SubmitGoogleUsername)
 

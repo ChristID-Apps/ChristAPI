@@ -96,19 +96,37 @@ func (s *AuthService) RegisterWithContact(fullName string, phone *string, addres
 		return "", nil, nil, err
 	}
 
-	otp := helpers.GenerateOTP()
-	expiry := time.Now().Add(5 * time.Minute)
-	if err := s.Repo.SaveOTP(u.ID, otp, expiry); err != nil {
+	if err := s.issueOTP(u); err != nil {
 		return "", nil, nil, err
 	}
 
-	// Send OTP via email
-	if err := emailsvc.SendOTP(u.Email, otp); err != nil {
-		// Log error but don't fail registration — user can still verify with console OTP if email fails
-		fmt.Printf("[WARN] Failed to send OTP email to %s: %v\n", u.Email, err)
-	}
+	return "", u, c, nil
+}
 
-	return otp, u, c, nil
+func (s *AuthService) issueOTP(user *User) error {
+	otp := helpers.GenerateOTP()
+	expiry := time.Now().Add(5 * time.Minute)
+	if err := s.Repo.SaveOTP(user.ID, otp, expiry); err != nil {
+		return fmt.Errorf("save otp: %w", err)
+	}
+	if err := emailsvc.SendOTP(user.Email, otp); err != nil {
+		return fmt.Errorf("%w: %v", ErrOTPDeliveryFailed, err)
+	}
+	return nil
+}
+
+func (s *AuthService) ResendOTP(email string) error {
+	user, err := s.Repo.FindByEmail(email)
+	if err != nil {
+		return fmt.Errorf("find user for otp resend: %w", err)
+	}
+	if user == nil {
+		return errors.New("user not found")
+	}
+	if user.ApprovalStatus != "pending_otp" {
+		return fmt.Errorf("user is not in pending_otp status (current status: %s)", user.ApprovalStatus)
+	}
+	return s.issueOTP(user)
 }
 
 // VerifyOTP itu fungsinya untuk verifikasi OTP yang dikirim ke email user saat register. Kalau OTP valid, maka status user akan diubah menjadi pending_approval, jadi nanti admin bisa approve user ini.

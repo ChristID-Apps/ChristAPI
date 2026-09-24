@@ -290,6 +290,20 @@ func (r *ContactRepository) UpdateProfile(userID int64, req *ProfileUpdateReques
 		return nil, sql.ErrConnDone
 	}
 
+	tx, err := r.DB.Begin()
+	if err != nil {
+		return nil, err
+	}
+	rollback := func() {
+		_ = tx.Rollback()
+	}
+
+	var contactID sql.NullInt64
+	if err := tx.QueryRow("SELECT contact_id FROM users WHERE id = $1 FOR UPDATE", userID).Scan(&contactID); err != nil {
+		rollback()
+		return nil, err
+	}
+
 	columns := []string{}
 	args := []interface{}{}
 	add := func(name string, value interface{}) {
@@ -308,20 +322,45 @@ func (r *ContactRepository) UpdateProfile(userID int64, req *ProfileUpdateReques
 	if len(columns) == 0 {
 		columns = append(columns, "updated_at=NOW()")
 	}
-	args = append(args, userID)
-
-	query := `UPDATE contacts
-		SET ` + strings.Join(columns, ", ") + `, updated_at=NOW()
-		WHERE id = (SELECT contact_id FROM users WHERE id = $` + fmt.Sprint(len(args)) + `)
-		  AND deleted_at IS NULL`
-	result, err := r.DB.Exec(query, args...)
-	if err != nil {
-		return nil, err
+	if !contactID.Valid {
+		fullName := ""
+		if req.FullName != nil {
+			fullName = *req.FullName
+		}
+		var newContactID int64
+		if err := tx.QueryRow(`
+			INSERT INTO contacts (full_name, phone, address, created_at, updated_at)
+			VALUES ($1, $2, $3, NOW(), NOW())
+			RETURNING id`, fullName, req.Phone, req.Address).Scan(&newContactID); err != nil {
+			rollback()
+			return nil, err
+		}
+		if _, err := tx.Exec("UPDATE users SET contact_id = $1, updated_at = NOW() WHERE id = $2", newContactID, userID); err != nil {
+			rollback()
+			return nil, err
+		}
+	} else {
+		args = append(args, contactID.Int64)
+		query := `UPDATE contacts
+			SET ` + strings.Join(columns, ", ") + `, deleted_at = NULL
+			WHERE id = $` + fmt.Sprint(len(args))
+		result, err := tx.Exec(query, args...)
+		if err != nil {
+			rollback()
+			return nil, err
+		}
+		if affected, err := result.RowsAffected(); err != nil {
+			rollback()
+			return nil, err
+		} else if affected == 0 {
+			rollback()
+			return nil, sql.ErrNoRows
+		}
 	}
-	if affected, err := result.RowsAffected(); err != nil {
+
+	if err := tx.Commit(); err != nil {
+		rollback()
 		return nil, err
-	} else if affected == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return r.GetProfile(userID)
 }

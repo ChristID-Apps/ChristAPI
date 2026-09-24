@@ -253,6 +253,41 @@
         .auth-main { display: grid; place-items: center; padding: 32px 24px; }
         .auth-card { width: min(430px, 100%); display: grid; gap: 18px; }
 
+        .otp-panel { display: grid; gap: 20px; }
+        .otp-heading { display: grid; gap: 10px; text-align: center; justify-items: center; }
+        .otp-mark {
+            width: 52px; height: 52px; border-radius: 15px;
+            display: grid; place-items: center;
+            background: var(--brand-soft); color: var(--brand);
+        }
+        .otp-heading h2 { margin: 0; font-size: 22px; }
+        .otp-heading p { margin: 0; max-width: 34ch; color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+        .otp-email-wrap { display: grid; gap: 5px; }
+        .otp-email-wrap .field { gap: 0; }
+        .otp-email-wrap .field > label { font-size: 12px; }
+        .otp-code-field { display: grid; gap: 8px; }
+        .otp-code-field label { color: var(--ink-2); font-size: 13px; font-weight: 600; text-align: center; }
+        .otp-code-input {
+            width: 100%; min-height: 58px; padding: 8px 12px;
+            border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+            background: var(--surface); color: var(--ink);
+            font-size: 28px; font-weight: 800; letter-spacing: .28em;
+            text-align: center; font-variant-numeric: tabular-nums;
+        }
+        .otp-code-input::placeholder { color: var(--line-strong); letter-spacing: .28em; }
+        .otp-code-input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+        .otp-code-hint { color: var(--ink-3); font-size: 12px; text-align: center; }
+        .otp-status { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--ink-3); font-size: 12px; }
+        .otp-status strong { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+        .otp-status.bad, .otp-status.bad strong { color: var(--bad); }
+        .otp-actions { display: grid; gap: 8px; }
+        .otp-resend { width: 100%; }
+        .otp-back { width: 100%; }
+        @media (max-width: 560px) {
+            .auth-main { padding: 24px 16px; }
+            .otp-code-input { font-size: 25px; }
+        }
+
         .wordmark { display: inline-flex; align-items: center; gap: 9px; font-weight: 800; letter-spacing: -.02em; font-size: 17px; }
         .wordmark .mark {
             width: 26px; height: 26px; border-radius: 7px;
@@ -868,8 +903,51 @@
             renderAuthPanel(mode);
         };
 
+        let otpCountdownTimer = null;
+        function stopOTPCountdown() {
+            if (otpCountdownTimer) clearInterval(otpCountdownTimer);
+            otpCountdownTimer = null;
+        }
+        function startOTPCountdown(seconds) {
+            stopOTPCountdown();
+            let remaining = seconds;
+            const render = () => {
+                const target = $("#otp-countdown");
+                if (!target) return;
+                const minutes = String(Math.floor(remaining / 60)).padStart(2, "0");
+                const secondsPart = String(remaining % 60).padStart(2, "0");
+                target.textContent = minutes + ":" + secondsPart;
+                target.parentElement.classList.toggle("bad", remaining === 0);
+            };
+            render();
+            otpCountdownTimer = setInterval(() => {
+                remaining = Math.max(remaining - 1, 0);
+                render();
+                if (remaining === 0) stopOTPCountdown();
+            }, 1000);
+        }
+        function startOTPResendCooldown(seconds) {
+            const button = $(".otp-resend");
+            if (!button) return;
+            let remaining = seconds;
+            button.disabled = true;
+            const render = () => {
+                button.textContent = remaining > 0 ? "Kirim ulang dalam " + remaining + " dtk" : "Kirim ulang OTP";
+            };
+            render();
+            const timer = setInterval(() => {
+                remaining -= 1;
+                render();
+                if (remaining <= 0) {
+                    clearInterval(timer);
+                    button.disabled = false;
+                }
+            }, 1000);
+        }
+
         function renderAuthPanel(mode) {
             const panel = $("#auth-panel");
+            if (mode !== "otp") stopOTPCountdown();
             if (mode === "register") {
                 panel.innerHTML =
                     '<form class="stack" data-act="register" novalidate>' +
@@ -887,13 +965,30 @@
             }
             if (mode === "otp") {
                 panel.innerHTML =
-                    '<form class="stack" data-act="verify-otp" novalidate>' +
-                    '<div class="note">Kode OTP dikirim ke email Anda dan berlaku terbatas. Cek juga folder spam.</div>' +
-                    field({ id: "otp-email", label: "Email terdaftar", type: "email", value: store("christapi_last_email") || "", attrs: "required autocomplete=email" }) +
-                    field({ id: "otp-code", label: "Kode OTP", placeholder: "6 digit", attrs: "required inputmode=numeric autocomplete=one-time-code" }) +
+                    '<form class="otp-panel" data-act="verify-otp" novalidate>' +
+                    '<div class="otp-heading">' +
+                    '<div class="otp-mark">' + icon("shield", 25) + "</div>" +
+                    '<div><h2>Verifikasi email</h2><p>Masukkan kode 6 digit yang kami kirim untuk mengaktifkan akun Anda.</p></div>' +
+                    "</div>" +
+                    '<div class="note">Tidak menemukan emailnya? Periksa folder spam atau kirim ulang kode di bawah.</div>' +
+                    '<div class="otp-email-wrap">' +
+                    field({ id: "otp-email", label: "Kode dikirim ke", type: "email", value: store("christapi_last_email") || "", attrs: "required autocomplete=email" }) +
+                    "</div>" +
+                    '<div class="otp-code-field"><label for="otp-code">Kode OTP</label>' +
+                    '<input class="otp-code-input" id="otp-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="••••••" aria-describedby="otp-code-hint" required>' +
+                    '<div class="otp-code-hint" id="otp-code-hint">Enam angka, tanpa spasi</div></div>' +
+                    '<div class="otp-status" role="status" aria-live="polite">Kode berlaku selama <strong id="otp-countdown">05:00</strong></div>' +
+                    '<div class="otp-actions">' +
                     '<button class="btn" type="submit" data-busy-label="Memverifikasi...">Verifikasi akun</button>' +
-                    '<button type="button" class="btn ghost" data-act="auth-tab" data-mode="login">Kembali ke halaman masuk</button>' +
-                    "</form>";
+                    '<button type="button" class="btn quiet otp-resend" data-act="resend-otp" data-busy-label="Mengirim ulang...">Kirim ulang OTP</button>' +
+                    '<button type="button" class="btn ghost otp-back" data-act="auth-tab" data-mode="login">Kembali ke halaman masuk</button>' +
+                    "</div></form>";
+                startOTPCountdown(300);
+                const otpInput = $("#otp-code");
+                otpInput?.focus();
+                otpInput?.addEventListener("input", event => {
+                    event.target.value = event.target.value.replace(/\D/g, "").slice(0, 6);
+                });
                 return;
             }
             panel.innerHTML =
@@ -941,9 +1036,25 @@
             });
         };
 
+        ACTIONS["resend-otp"] = async (_data, button) => {
+            const email = val("otp-email");
+            if (!email) return toast("Isi email terdaftar dulu.", "warn");
+            store("christapi_last_email", email);
+            await withBusy(button, async () => {
+                try {
+                    await api("/resend-otp", { method: "POST", body: JSON.stringify({ email }) });
+                    startOTPCountdown(300);
+                    startOTPResendCooldown(30);
+                    toast("OTP baru telah dikirim ke " + email + ".");
+                } catch (error) { toastError(error); }
+            });
+        };
+
         ACTIONS["verify-otp"] = async (_data, form) => {
             const email = val("otp-email"), code = val("otp-code");
             if (!email || !code) return toast("Isi email dan kode OTP.", "warn");
+            if (!/^\d{6}$/.test(code)) return toast("Kode OTP harus terdiri dari 6 angka.", "warn");
+            store("christapi_last_email", email);
             await withBusy($("button[type=submit]", form), async () => {
                 try {
                     await api("/verify-otp", { method: "POST", body: JSON.stringify({ email, otp_code: code }) });

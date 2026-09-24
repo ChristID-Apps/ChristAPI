@@ -118,7 +118,7 @@ func rateLimitKey(ip, bucketName string) string {
 
 func isAuthPath(path string) bool {
 	switch path {
-	case "/api/login", "/api/register", "/api/verify-otp", "/api/auth/google", "/api/auth/google/username":
+	case "/api/login", "/api/register", "/api/verify-otp", "/api/resend-otp", "/api/auth/google", "/api/auth/google/username":
 		return true
 	default:
 		return false
@@ -129,7 +129,7 @@ func rateLimitRule(path string) (string, int, time.Duration, bool) {
 	if isRateLimitExempt(path) {
 		return "", 0, 0, true
 	}
-	if path == "/api/verify-otp" {
+	if path == "/api/verify-otp" || path == "/api/resend-otp" {
 		return "otp", config.otpRequestsPerWindow, config.otpWindow, false
 	}
 	if isAuthPath(path) {

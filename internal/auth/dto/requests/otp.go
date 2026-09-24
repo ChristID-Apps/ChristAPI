@@ -4,3 +4,7 @@ type VerifyOTPRequest struct {
 	Email   string `json:"email"`
 	OTPCode string `json:"otp_code"`
 }
+
+type ResendOTPRequest struct {
+	Email string `json:"email"`
+}

@@ -1,0 +1,1285 @@
+{
+    "info": {
+        "name": "ChristAPI",
+        "description": "Collection seluruh route ChristAPI. Set baseUrl, googleIdToken, dan ID resource pada collection variables.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000/api"
+        },
+        {
+            "key": "token",
+            "value": ""
+        },
+        {
+            "key": "adminToken",
+            "value": ""
+        },
+        {
+            "key": "googleIdToken",
+            "value": ""
+        },
+        {
+            "key": "email",
+            "value": "user@example.com"
+        },
+        {
+            "key": "otp",
+            "value": ""
+        },
+        {
+            "key": "userId",
+            "value": "1"
+        },
+        {
+            "key": "roleId",
+            "value": "1"
+        },
+        {
+            "key": "activityUuid",
+            "value": ""
+        },
+        {
+            "key": "newsUuid",
+            "value": ""
+        },
+        {
+            "key": "siteUuid",
+            "value": ""
+        },
+        {
+            "key": "contactId",
+            "value": "1"
+        }
+    ],
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Login credentials",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const json = pm.response.json();",
+                                    "if (json.data?.token) pm.collectionVariables.set('token', json.data.token);",
+                                    "if (json.data?.user?.role && ['admin', 'super_admin'].includes(json.data.user.role.toLowerCase().replace(/[-\\s]/g, '_'))) pm.collectionVariables.set('adminToken', json.data.token);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"password\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "login"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Register credentials",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"full_name\": \"Demo User\",\n  \"email\": \"{{email}}\",\n  \"password\": \"password123\",\n  \"phone\": null,\n  \"address\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "register"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Verify OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{email}}\",\n  \"otp_code\": \"{{otp}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/verify-otp",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "verify-otp"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Google login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "const json = pm.response.json();",
+                                    "if (json.data?.token) pm.collectionVariables.set('token', json.data.token);"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id_token\": \"{{googleIdToken}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/google",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "google"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Complete Google registration",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id_token\": \"{{googleIdToken}}\",\n  \"username\": \"demo_user\",\n  \"full_name\": \"Demo User\",\n  \"phone\": null,\n  \"address\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/auth/google/username",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "auth",
+                                "google",
+                                "username"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Protected user routes",
+            "item": [
+                {
+                    "name": "Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/profile",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "profile"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/logout",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "logout"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Activity categories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/activity-categories",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "activity-categories"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List activities",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/activities?limit=20&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "activities"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "20"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get activity",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/activities/{{activityUuid}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "activities",
+                                "{{activityUuid}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List sites",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/sites",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "sites"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get own points",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/points?userId={{userId}}&limit=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "points"
+                            ],
+                            "query": [
+                                {
+                                    "key": "userId",
+                                    "value": "{{userId}}"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Spend points",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 5,\n  \"reason\": \"Demo spending\",\n  \"reference_id\": \"demo-reference-001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/points/spend",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "points",
+                                "spend"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List streaks",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/streaks",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "streaks"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Check in streak",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"activity_uuid\": \"{{activityUuid}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/streaks/check-in",
+                            "host": [
+                                "{{baseUrl}}",
+                                "streaks",
+                                "check-in"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List published news",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{token}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/news?limit=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "news"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin routes",
+            "item": [
+                {
+                    "name": "List pending approvals",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/approvals",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "approvals"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Approve user",
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/approvals/{{userId}}/approve",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "approvals",
+                                "{{userId}}",
+                                "approve"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Reject user",
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/approvals/{{userId}}/reject",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "approvals",
+                                "{{userId}}",
+                                "reject"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List roles",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/roles",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "roles"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create role",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Editor\",\n  \"code\": \"editor\",\n  \"description\": \"Content editor\",\n  \"site_id\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/roles",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "roles"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update role partial",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "name",
+                                    "value": "Updated role name",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/roles/{{roleId}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "roles",
+                                "{{roleId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create activity",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Community service\",\n  \"description\": \"Demo activity\",\n  \"category_id\": 1,\n  \"activity_type\": \"one_time\",\n  \"status\": \"published\",\n  \"max_participants\": null,\n  \"requires_registration\": false,\n  \"streak_enabled\": true,\n  \"streak_type\": \"daily_activity\",\n  \"streak_points\": 5,\n  \"occurrence\": {\n    \"starts_at\": \"2026-09-16T09:00:00Z\",\n    \"ends_at\": null,\n    \"location\": \"Church hall\",\n    \"status\": \"scheduled\",\n    \"notes\": null\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "activities"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update activity partial",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "title",
+                                    "value": "Updated activity title",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities/{{activityUuid}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "activities",
+                                "{{activityUuid}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete activity",
+                    "request": {
+                        "method": "DELETE",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities/{{activityUuid}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "activities",
+                                "{{activityUuid}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Upload activity image",
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": ""
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/activities/{{activityUuid}}/image",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "activities",
+                                "{{activityUuid}}",
+                                "image"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create site",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Main site\",\n  \"address\": \"Main street\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/sites",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "sites"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update site partial",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"Updated site name\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/sites/{{siteUuid}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "sites",
+                                "{{siteUuid}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List contacts",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/contacts?limit=50",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "contacts"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get contact",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/contacts/{{contactId}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "contacts",
+                                "{{contactId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create contact",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"full_name\": \"Demo Contact\",\n  \"phone\": null,\n  \"address\": null,\n  \"site_id\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/contacts",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "contacts"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update contact partial",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"full_name\": \"Updated contact name\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/contacts/{{contactId}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "contacts",
+                                "{{contactId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete contact",
+                    "request": {
+                        "method": "DELETE",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/contacts/{{contactId}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "contacts",
+                                "{{contactId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "List all balances",
+                    "request": {
+                        "method": "GET",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/points?limit=50",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "points"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Earn points",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"amount\": 10,\n  \"reason\": \"Admin reward\",\n  \"reference_id\": \"admin-demo-001\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/points/earn",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "points",
+                                "earn"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Create news",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Demo news\",\n  \"slug\": \"demo-news\",\n  \"excerpt\": \"Short summary\",\n  \"content\": \"News content\",\n  \"status\": \"draft\",\n  \"is_featured\": false,\n  \"meta\": null,\n  \"published_at\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/news",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "admin",
+                                "news"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update news partial",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Updated news title\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/news/{{newsUuid}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "news",
+                                "{{newsUuid}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete news",
+                    "request": {
+                        "method": "DELETE",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/news/{{newsUuid}}",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "news",
+                                "{{newsUuid}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Upload news image",
+                    "request": {
+                        "method": "POST",
+                        "auth": {
+                            "type": "bearer",
+                            "bearer": [
+                                {
+                                    "key": "token",
+                                    "value": "{{adminToken}}",
+                                    "type": "string"
+                                }
+                            ]
+                        },
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": ""
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/admin/news/{{newsUuid}}/image",
+                            "host": [
+                                "{{baseUrl}}",
+                                "admin",
+                                "news",
+                                "{{newsUuid}}",
+                                "image"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

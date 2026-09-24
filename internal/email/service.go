@@ -2,6 +2,7 @@ package email
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -9,6 +10,7 @@ import (
 )
 
 func SendOTP(email, otpCode string) error {
+	log.Printf("otp email send started recipient=%s", maskEmail(email))
 	host := os.Getenv("SMTP_HOST")
 	portStr := os.Getenv("SMTP_PORT")
 	user := os.Getenv("SMTP_USER")
@@ -16,12 +18,16 @@ func SendOTP(email, otpCode string) error {
 	sender := os.Getenv("SENDER_EMAIL")
 
 	if host == "" || user == "" || password == "" || sender == "" {
-		return fmt.Errorf("SMTP configuration incomplete")
+		err := fmt.Errorf("SMTP configuration incomplete")
+		log.Printf("otp email send failed recipient=%s stage=config error=%v", maskEmail(email), err)
+		return err
 	}
 
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		return fmt.Errorf("invalid SMTP_PORT: %w", err)
+		err = fmt.Errorf("invalid SMTP_PORT: %w", err)
+		log.Printf("otp email send failed recipient=%s stage=config error=%v", maskEmail(email), err)
+		return err
 	}
 
 	m := gomail.NewMessage()
@@ -113,5 +119,22 @@ func SendOTP(email, otpCode string) error {
 	</html>
 	`, otpCode))
 	d := gomail.NewDialer(host, port, user, password)
-	return d.DialAndSend(m)
+	if err := d.DialAndSend(m); err != nil {
+		log.Printf("otp email send failed recipient=%s stage=smtp error=%v", maskEmail(email), err)
+		return err
+	}
+	log.Printf("otp email sent recipient=%s", maskEmail(email))
+	return nil
+}
+
+func maskEmail(email string) string {
+	for i, character := range email {
+		if character == '@' {
+			if i == 0 {
+				return "[invalid-email]"
+			}
+			return email[:1] + "***" + email[i:]
+		}
+	}
+	return "[invalid-email]"
 }

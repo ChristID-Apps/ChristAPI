@@ -9,4 +9,5 @@ var (
 	ErrWrongProvider     = errors.New("account uses another login provider")
 	ErrAccountInactive   = errors.New("account is inactive")
 	ErrAccountPending    = errors.New("account is awaiting admin approval")
+	ErrOTPDeliveryFailed = errors.New("OTP email delivery failed")
 )

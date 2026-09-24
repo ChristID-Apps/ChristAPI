@@ -91,6 +91,9 @@ func registerErrorResponse(err error) (int, string) {
 	if errors.Is(err, ErrUserAlreadyExists) {
 		return 409, err.Error()
 	}
+	if errors.Is(err, ErrOTPDeliveryFailed) {
+		return 503, "OTP email delivery failed; please request a new OTP"
+	}
 	return 500, "Registration service unavailable"
 }
 
@@ -114,6 +117,27 @@ func (h *Handler) VerifyOTP(c *fiber.Ctx) error {
 
 	log.Printf("otp verification succeeded email=%s", maskEmail(req.Email))
 	return response.Success(c, "OTP verified successfully. Your account is now pending admin approval.", nil)
+}
+
+func (h *Handler) ResendOTP(c *fiber.Ctx) error {
+	req := new(requests.ResendOTPRequest)
+	if err := c.BodyParser(req); err != nil {
+		return response.ErrorDetail(c, 422, "Invalid resend OTP request", err)
+	}
+	if req.Email == "" {
+		return response.Error(c, 422, "Email is required", nil)
+	}
+
+	if err := h.service.ResendOTP(req.Email); err != nil {
+		log.Printf("otp resend failed email=%s error=%v", maskEmail(req.Email), err)
+		if errors.Is(err, ErrOTPDeliveryFailed) {
+			return response.Error(c, 503, "OTP email delivery failed", nil)
+		}
+		return response.ErrorDetail(c, 400, "OTP resend failed", err)
+	}
+
+	log.Printf("otp resend succeeded email=%s", maskEmail(req.Email))
+	return response.Success(c, "A new OTP has been sent.", nil)
 }
 
 func maskEmail(email string) string {
