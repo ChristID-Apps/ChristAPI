@@ -1,12 +1,15 @@
 package news
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"christ-api/internal/uploadimage"
 	"christ-api/pkg/response"
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,6 +24,8 @@ func NewHandler(repo *NewsRepository) *Handler {
 
 func (h *Handler) List(c *fiber.Ctx) error {
 	var filter NewsFilter
+	isAdmin, _ := c.Locals("is_admin").(bool)
+	filter.Status = newsStatusFilter(isAdmin, c.Query("status"))
 
 	if v := c.Query("site_id"); v != "" {
 		id, err := strconv.ParseInt(v, 10, 64)
@@ -61,6 +66,13 @@ func (h *Handler) List(c *fiber.Ctx) error {
 	return response.Success(c, "News retrieved", out)
 }
 
+func newsStatusFilter(isAdmin bool, requested string) string {
+	if !isAdmin {
+		return "published"
+	}
+	return requested
+}
+
 func (h *Handler) Create(c *fiber.Ctx) error {
 	var req News
 	if err := c.BodyParser(&req); err != nil {
@@ -80,6 +92,9 @@ func (h *Handler) Update(c *fiber.Ctx) error {
 		return response.ErrorDetail(c, 422, "Invalid news request", err)
 	}
 	if err := h.service.Update(uuid, &req); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return response.Error(c, 404, "News not found", nil)
+		}
 		return response.ErrorDetail(c, 500, "Failed to update news", err)
 	}
 	return response.Success(c, "News updated", nil)
@@ -91,6 +106,9 @@ func (h *Handler) Delete(c *fiber.Ctx) error {
 		return response.Error(c, 422, "uuid required", fiber.Map{"detail": "news uuid path parameter is empty"})
 	}
 	if err := h.service.Delete(uuid); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return response.Error(c, 404, "News not found", nil)
+		}
 		return response.ErrorDetail(c, 500, "Failed to delete news", err)
 	}
 	return response.Success(c, "News deleted", nil)
@@ -105,13 +123,15 @@ func (h *Handler) UploadImage(c *fiber.Ctx) error {
 	if err != nil {
 		return response.ErrorDetail(c, 422, "News image is required", err)
 	}
-	if file.Size > 5*1024*1024 {
+	extension, err := uploadimage.Validate(file)
+	if err == uploadimage.ErrTooLarge {
 		return response.Error(c, 422, "News image is too large", fiber.Map{"detail": "maximum image size is 5 MB"})
 	}
-	extension := strings.ToLower(filepath.Ext(file.Filename))
-	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
-	if !allowed[extension] {
+	if err == uploadimage.ErrUnsupported {
 		return response.Error(c, 422, "Unsupported news image format", fiber.Map{"detail": "allowed formats: jpg, jpeg, png, webp"})
+	}
+	if err != nil {
+		return response.ErrorDetail(c, 500, "Failed to inspect news image", err)
 	}
 	directory := filepath.Join("uploads", "news")
 	if err := os.MkdirAll(directory, 0755); err != nil {

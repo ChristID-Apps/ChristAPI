@@ -27,7 +27,7 @@ func (r *Repository) Submit(userID int64, activityUUID string, answer *string) (
 	var title, version, book string
 	var startChapter, startVerse, endChapter, endVerse, minLength int
 	var requiresReflection bool
-	err = tx.QueryRow(`SELECT a.id, a.title, b.version_code, b.book_code, b.start_chapter, b.start_verse, b.end_chapter, b.end_verse, b.requires_reflection, b.reflection_min_length FROM activities a JOIN activity_bible_configs b ON b.activity_id = a.id WHERE a.uuid = $1 AND a.deleted_at IS NULL`, activityUUID).Scan(&activityID, &title, &version, &book, &startChapter, &startVerse, &endChapter, &endVerse, &requiresReflection, &minLength)
+	err = tx.QueryRow(`SELECT a.id, a.title, b.version_code, b.book_code, b.start_chapter, b.start_verse, b.end_chapter, b.end_verse, b.requires_reflection, b.reflection_min_length FROM activities a JOIN activity_bible_configs b ON b.activity_id = a.id WHERE a.uuid = $1 AND a.deleted_at IS NULL AND a.status = 'published'`, activityUUID).Scan(&activityID, &title, &version, &book, &startChapter, &startVerse, &endChapter, &endVerse, &requiresReflection, &minLength)
 	if err != nil {
 		rollback()
 		if errors.Is(err, sql.ErrNoRows) {

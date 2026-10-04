@@ -1,7 +1,6 @@
 package response
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -31,10 +30,16 @@ func ErrorDetail(c *fiber.Ctx, status int, message string, err error) error {
 	if err == nil {
 		return Error(c, status, message, nil)
 	}
-	log.Printf("api error: %s: %v", message, err)
+	log.Printf("api error method=%s path=%s status=%d message=%q error=%v", c.Method(), c.Path(), status, message, err)
+	errorType := "request_error"
+	detail := message
+	if status >= 500 {
+		errorType = "internal_error"
+		detail = "Internal server error"
+	}
 	return Error(c, status, message, fiber.Map{
-		"type":   fmt.Sprintf("%T", err),
-		"detail": err.Error(),
+		"type":   errorType,
+		"detail": detail,
 	})
 }
 

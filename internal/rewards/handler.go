@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"christ-api/internal/uploadimage"
 	"christ-api/pkg/response"
 	"github.com/gofiber/fiber/v2"
 )
@@ -85,13 +86,15 @@ func (h *Handler) UploadImage(c *fiber.Ctx) error {
 	if err != nil {
 		return response.ErrorDetail(c, 422, "Reward image is required", err)
 	}
-	if file.Size > 5*1024*1024 {
+	extension, err := uploadimage.Validate(file)
+	if err == uploadimage.ErrTooLarge {
 		return response.Error(c, 422, "Reward image is too large", fiber.Map{"detail": "maximum image size is 5 MB"})
 	}
-	extension := strings.ToLower(filepath.Ext(file.Filename))
-	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
-	if !allowed[extension] {
+	if err == uploadimage.ErrUnsupported {
 		return response.Error(c, 422, "Unsupported reward image format", fiber.Map{"detail": "allowed formats: jpg, jpeg, png, webp"})
+	}
+	if err != nil {
+		return response.ErrorDetail(c, 500, "Failed to inspect reward image", err)
 	}
 	directory := filepath.Join("uploads", "rewards")
 	if err := os.MkdirAll(directory, 0755); err != nil {

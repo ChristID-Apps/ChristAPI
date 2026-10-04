@@ -179,6 +179,9 @@ func (s *AuthService) GoogleLoginOrRegister(email, googleID string, siteID *int6
 	if user.AuthProvider != "google" {
 		return "", "", nil, errors.New("this email is registered using password credentials. Please login via Email/Password")
 	}
+	if !googleIDMatches(user.GoogleID, googleID) {
+		return "", "", nil, errors.New("Google account does not match user")
+	}
 
 	// kalau user ada tapi statusnya pending_username, maka return status pending_username
 	// fungsinya untuk memberitahu client bahwa user harus submit username dulu sebelum bisa login
@@ -229,6 +232,10 @@ func (s *AuthService) GoogleLoginOrRegister(email, googleID string, siteID *int6
 	}
 
 	return token, "approved", profile, nil
+}
+
+func googleIDMatches(stored *string, received string) bool {
+	return stored != nil && *stored != "" && *stored == received
 }
 
 func (s *AuthService) SubmitGoogleUsername(email, googleID, username, fullName string, phone, address *string, siteID *int64) error {

@@ -68,8 +68,9 @@ func AuthMiddleware(c *fiber.Ctx) error {
 	var isActive bool
 	var approvalStatus string
 	var lastLogoutAt sql.NullTime
-	query := `SELECT is_active, approval_status, COALESCE(last_logout_at, NULL) FROM users WHERE id = $1 LIMIT 1`
-	err = database.DB.QueryRow(query, userID).Scan(&isActive, &approvalStatus, &lastLogoutAt)
+	var roleID sql.NullInt64
+	query := `SELECT is_active, approval_status, COALESCE(last_logout_at, NULL), role_id FROM users WHERE id = $1 LIMIT 1`
+	err = database.DB.QueryRow(query, userID).Scan(&isActive, &approvalStatus, &lastLogoutAt, &roleID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return response.ErrorDetail(c, 401, "user not found", err)
@@ -79,6 +80,9 @@ func AuthMiddleware(c *fiber.Ctx) error {
 
 	if !isActive || approvalStatus != "approved" {
 		return response.Error(c, 403, "your account is inactive or pending approval", nil)
+	}
+	if roleID.Valid {
+		c.Locals("role_id", roleID.Int64)
 	}
 
 	// Validate token wasn't issued before user's last logout
