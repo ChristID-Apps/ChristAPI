@@ -10,9 +10,6 @@
 set -e
 
 CONTAINER="postgre-chrisapi"
-DB_USER="christ_user"
-DB_NAME="christ_db"
-PASSWORD="christ_password"
 
 echo -e "\033[36m[*] ChristAPI Database Reset Tool\033[0m"
 echo ""
@@ -55,8 +52,8 @@ fi
 # Truncate mode: clear all tables
 if [ "$MODE" = "truncate" ]; then
     echo -e "\033[33m[*] Truncating all tables...\033[0m"
-    docker exec "$CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -c \
-        "TRUNCATE TABLE contacts, roles, user_otps, users, sites, news, user_points_ledger CASCADE;"
+    docker exec "$CONTAINER" sh -c \
+        'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "TRUNCATE TABLE contacts, roles, user_otps, users, sites, news, user_points_ledger CASCADE;"'
     
     if [ $? -eq 0 ]; then
         echo -e "\033[32m[OK] All tables truncated successfully\033[0m"
@@ -68,11 +65,13 @@ if [ "$MODE" = "truncate" ]; then
 
 # Drop mode: drop and recreate database
 elif [ "$MODE" = "drop" ]; then
-    echo -e "\033[33m[*] Dropping database '$DB_NAME'...\033[0m"
-    docker exec "$CONTAINER" psql -U "$DB_USER" -c "DROP DATABASE IF EXISTS $DB_NAME;" 2>/dev/null
+    echo -e "\033[33m[*] Dropping configured database...\033[0m"
+    docker exec "$CONTAINER" sh -c \
+        'psql -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS \"$POSTGRES_DB\";"' 2>/dev/null
     
-    echo -e "\033[33m[*] Creating new database '$DB_NAME'...\033[0m"
-    docker exec "$CONTAINER" psql -U "$DB_USER" -c "CREATE DATABASE $DB_NAME;" 2>/dev/null
+    echo -e "\033[33m[*] Creating configured database...\033[0m"
+    docker exec "$CONTAINER" sh -c \
+        'psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE \"$POSTGRES_DB\";"' 2>/dev/null
     
     if [ $? -eq 0 ]; then
         echo -e "\033[32m[OK] Database dropped and recreated successfully\033[0m"
@@ -85,8 +84,7 @@ elif [ "$MODE" = "drop" ]; then
     if [ "$DO_MIGRATE" = "--migrate" ]; then
         echo ""
         echo -e "\033[33m[*] Running migrations...\033[0m"
-        docker compose run --rm migrate -path=/migrations -database \
-            "postgres://$DB_USER:$PASSWORD@$CONTAINER:5432/$DB_NAME?sslmode=disable" up
+        docker compose --profile manual-migration run --rm migrate
         
         if [ $? -eq 0 ]; then
             echo -e "\033[32m[OK] Migrations completed successfully\033[0m"

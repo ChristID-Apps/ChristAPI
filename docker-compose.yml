@@ -13,7 +13,6 @@ services:
       - "5433:5432"
     volumes:
       - christ_postgres_data:/var/lib/postgresql/data
-      - ./docs/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U christ_user"]
       interval: 10s
@@ -48,13 +47,18 @@ services:
     container_name: migrate_christapi
     env_file:
       - .env.docker
+    profiles:
+      - manual-migration
     volumes:
       - ./migrations:/migrations
     networks:
       - christ-network
-    entrypoint: ["migrate"]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - 'exec migrate -path=/migrations -database "postgres://$${DB_USER}:$${DB_PASSWORD}@$${DB_HOST}:$${DB_PORT}/$${DB_NAME}?sslmode=$${DB_SSLMODE}" $${MIGRATION_ACTION:-up} $${MIGRATION_STEPS:-}'
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: "no"
 
 volumes:

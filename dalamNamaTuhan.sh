@@ -62,7 +62,7 @@ echo ""
 # 2. Check if .env.docker exists
 echo -e "\033[33m[*] Checking Docker environment variables...\033[0m"
 if [ ! -f ".env.docker" ]; then
-    echo -e "\033[31m[ERROR] .env.docker not found\033[0m"
+    echo -e "\033[31m[ERROR] .env.docker not found. Copy .env.docker.example to .env.docker and fill in local values.\033[0m"
     exit 1
 fi
 echo -e "\033[32m[OK] .env.docker already exists\033[0m"
@@ -104,7 +104,7 @@ elif [ "$RESTART" = true ]; then
 else
     echo -e "\033[33m[*] Starting services (postgres, api)...\033[0m"
     docker compose down
-    docker compose up -d
+    docker compose up -d postgres api
     echo -e "\033[32m[OK] Services started\033[0m"
     echo ""
 fi
@@ -114,7 +114,7 @@ echo -e "\033[33m[*] Waiting for PostgreSQL to be healthy...\033[0m"
 sleep 3
 
 for attempt in {1..15}; do
-    if docker exec postgre-chrisapi pg_isready -U christ_user > /dev/null 2>&1; then
+    if docker exec postgre-chrisapi sh -c 'pg_isready -U "$POSTGRES_USER"' > /dev/null 2>&1; then
         echo -e "\033[32m[OK] PostgreSQL is healthy\033[0m"
         break
     fi
@@ -128,7 +128,7 @@ if [ "$NO_MIGRATE" = true ] && [ "$MIGRATE_ONLY" = false ]; then
     echo -e "\033[33m[*] Skipping migrations (--no-migrate)\033[0m"
 else
     echo -e "\033[33m[*] Running database migrations...\033[0m"
-    docker compose run --rm migrate -path=/migrations -database "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable" up
+    docker compose --profile manual-migration run --rm migrate
     echo -e "\033[32m[OK] Migrations complete\033[0m"
 fi
 echo ""
@@ -157,9 +157,7 @@ echo ""
 echo -e "\033[36m[*] Database:\033[0m"
 echo -e "    Host: localhost"
 echo -e "    Port: 5433"
-echo -e "    Database: christ_db"
-echo -e "    User: christ_user"
-echo -e "    Password: christ_password"
+echo -e "    Database/user: configured in .env.docker"
 echo ""
 
 echo -e "\033[36m[*] Useful commands:\033[0m"
@@ -169,5 +167,5 @@ echo -e "    docker compose down                    # Stop services"
 echo ""
 
 echo -e "\033[36m[*] DBeaver connection string:\033[0m"
-echo -e "    postgres://christ_user:christ_password@localhost:5433/christ_db"
+echo -e "    Credentials: configured in .env.docker"
 echo ""
