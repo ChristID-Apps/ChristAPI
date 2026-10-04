@@ -12,7 +12,7 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1
 
 ✅ Done in ~15 seconds. API ready at http://localhost:3001
 
-Catatan keamanan: pastikan `.env` berisi `JWT_SECRET`. Aplikasi akan berhenti kalau secret ini belum diisi.
+Sebelum menjalankan script, salin `.env.docker.example` menjadi `.env.docker` dan isi secret lokal. Aplikasi akan berhenti jika `JWT_SECRET` kosong.
 
 ### Run-only mode
 
@@ -137,7 +137,7 @@ Host: localhost
 Port: 5433
 Database: christ_db
 User: christ_user
-Password: christ_password
+Password: nilai `POSTGRES_PASSWORD` pada `.env.docker` lokal
 ```
 
 ### Via psql Command
@@ -157,13 +157,13 @@ psql -h localhost -U christ_user -d christ_db
 ### Test Login Endpoint
 ```powershell
 # Windows PowerShell
-Invoke-WebRequest -Uri "http://localhost:3001/api/v1/auth/login" `
+Invoke-WebRequest -Uri "http://localhost:3001/api/login" `
   -Method POST `
   -ContentType "application/json" `
   -Body '{"email":"test@test.com","password":"test123"}'
 
 # Or use curl (if installed)
-curl -X POST http://localhost:3001/api/v1/auth/login `
+curl -X POST http://localhost:3001/api/login `
   -H "Content-Type: application/json" `
   -d '{"email":"test@test.com","password":"test123"}'
 ```
@@ -210,7 +210,7 @@ Press Ctrl+C
 
 ## After Setup - What's Next?
 
-1. **Review structure**: Open [docs/schema.sql](./docs/schema.sql)
+1. **Review schema changes**: Open [migrations/](./migrations/); `docs/schema.sql` is a legacy snapshot.
 2. **Check checklist**: Read [CHECKLIST.md](./CHECKLIST.md)
 3. **Explore handlers**: Look at `internal/auth`, `internal/bible`, etc.
 4. **Run tests**: `go test ./...`
@@ -230,7 +230,7 @@ Press Ctrl+C
 ## What the scripts do
 
 1. **Check Docker** — pastikan Docker Desktop running
-2. **Setup .env** — copy dari `.env.example` jika belum ada
+2. **Setup .env.docker** — copy dari `.env.docker.example` lalu isi secret lokal jika belum ada
 3. **Build image** — compile Go app ke Docker image
 4. **Start services** — jalankan `docker compose up -d` (postgres + api)
 5. **Wait for DB** — tunggu PostgreSQL healthy
@@ -281,8 +281,7 @@ postgre-chrisapi   postgres:16    "docker-entrypoint..."  Up 12 seconds (healthy
    Host: localhost
    Port: 5433
    Database: christ_db
-   User: christ_user
-   Password: christ_password
+   Credentials: lihat `.env.docker` lokal
 
 📚 Useful commands:
    docker compose logs -f                 # View logs
@@ -290,7 +289,7 @@ postgre-chrisapi   postgres:16    "docker-entrypoint..."  Up 12 seconds (healthy
    docker compose down                    # Stop services
 
 DBeaver connection string:
-   postgres://christ_user:christ_password@localhost:5433/christ_db
+   postgres://<user>:<password>@localhost:5433/<database>
 ```
 
 ---

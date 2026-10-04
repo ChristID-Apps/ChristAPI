@@ -13,6 +13,8 @@ Setelah clone project ini, ada **2 cara** untuk menjalankan:
 ### Requirement:
 - ✅ [Docker Desktop](https://www.docker.com/products/docker-desktop) (installed & running)
 
+Sebelum menjalankan setup, salin `.env.docker.example` menjadi `.env.docker` dan isi nilai lokal untuk database, JWT, serta integrasi yang digunakan. `.env.docker` tidak dilacak Git.
+
 ### Setup (One Command):
 
 ```powershell
@@ -54,8 +56,7 @@ API Server:
 Database:
     Host: localhost
     Port: 5433
-    User: christ_user
-    Password: christ_password
+    Kredensial: lihat konfigurasi lokal `.env.docker`
     Database: christ_db
 ```
 
@@ -113,7 +114,7 @@ createdb christ_db
 
 ### Step 2: Edit `.env.local`
 
-File `.env.local` sudah disiapkan di root folder. Sesuaikan kalau perlu:
+Buat `.env.local` untuk server lokal dan isi sesuai PostgreSQL development kamu:
 
 ```env
 DB_HOST=localhost
@@ -132,7 +133,7 @@ JWT_SECRET=your-secret-key-here-change-in-production
 - Kalau PostgreSQL kamu jalan lokal langsung, pakai `DB_PORT=5432`
 - `JWT_SECRET` dengan string random (production: gunakan secret manager)
 
-Untuk Docker full-stack, pakai `.env.docker` yang sudah disiapkan di root project.
+Untuk Docker full-stack, salin `.env.docker.example` menjadi `.env.docker`, lalu isi nilai lokal.
 
 ### Step 3: Run Migrations
 
@@ -147,11 +148,7 @@ choco install migrate
 migrate -path migrations -database "postgres://postgres:postgres@localhost:5432/christ_db?sslmode=disable" up
 ```
 
-**Option B: Manual dengan psql**
-
-```powershell
-psql -U postgres -d christ_db -f docs/schema.sql
-```
+Gunakan migration sebagai satu-satunya jalur untuk membuat schema aplikasi. `docs/schema.sql` adalah snapshot lama dan bukan pengganti migration.
 
 ### Step 4: Download Dependencies & Run
 
@@ -208,9 +205,7 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1
 → Pastikan `.env` ada di root folder project (sama level dengan `docker-compose.yml`)
 
 ### ❌ Database user/password error
-→ Cek `.env` dan `docker-compose.yml` - pastikan credential sama:
-- `.env`: `DB_USER=christ_user`, `DB_PASSWORD=christ_password`
-- `docker-compose.yml`: `POSTGRES_USER`, `POSTGRES_PASSWORD` harus sama
+→ Pastikan `DB_USER`/`DB_PASSWORD` pada `.env.docker` cocok dengan `POSTGRES_USER`/`POSTGRES_PASSWORD` pada file yang sama.
 
 ---
 

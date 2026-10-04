@@ -76,6 +76,149 @@ powershell -ExecutionPolicy Bypass -File .\dalamNamaTuhan.ps1 -MigrateOnly
 
 Catatan singkat: `.env.local` dipakai untuk `go run`, sedangkan `.env.docker` dipakai Docker Compose.
 
+## Tutorial Local Development: Database Docker, API Go di Host
+
+> Jalur ini menjalankan **PostgreSQL saja di Docker**, sedangkan API dijalankan langsung dengan `go run`. Jangan menjalankan service `api` dari Compose pada jalur ini. Docker Compose development memetakan PostgreSQL ke `localhost:5433`; port internal container tetap `5432`.
+
+### Windows (PowerShell)
+
+1. Pasang dan jalankan Docker Desktop, Go 1.25+, dan Git. Clone repository lalu buka terminal di folder project.
+2. Buat file konfigurasi lokal:
+   ```powershell
+   Copy-Item .env.docker.example .env.docker
+   Copy-Item .env.example .env.local
+   notepad .env.docker
+   notepad .env.local
+   ```
+3. Isi `.env.docker` untuk container PostgreSQL: pertahankan `POSTGRES_USER=christ_user` (dipakai healthcheck), isi `POSTGRES_PASSWORD` dan `POSTGRES_DB`, lalu samakan `DB_USER`, `DB_PASSWORD`, dan `DB_NAME`. Biarkan `DB_HOST=postgres` dan `DB_PORT=5432` di file Docker. Isi `JWT_SECRET` dengan nilai lokal acak.
+4. Atur titik gereja **sekali saja** di `.env.docker`: isi `ATTENDANCE_LATITUDE` dan `ATTENDANCE_LONGITUDE` dengan koordinat pin gereja. Ambil latitude/longitude dari pin peta (misalnya klik kanan titik di Google Maps lalu salin koordinat). Radius tetap 500 meter. Tidak perlu mengaktifkan precise location; akurasi yang dilaporkan perangkat dicatat, bukan dijadikan syarat check-in.
+5. Di `.env.local`, samakan `ATTENDANCE_LATITUDE` dan `ATTENDANCE_LONGITUDE` serta kredensial DB, tetapi gunakan `DB_HOST=localhost`, `DB_PORT=5433`, `DB_SSLMODE=disable`, `API_PORT=3000`, dan isi `JWT_SECRET`. File ini dipakai Go yang berjalan di Windows; jangan gunakan `DB_HOST=postgres` di sini.
+6. Jalankan **database saja** dan tunggu sampai sehat:
+   ```powershell
+   docker compose up -d postgres
+   docker compose ps
+   docker compose logs postgres
+   ```
+7. Terapkan migration satu kali:
+   ```powershell
+   docker compose --profile manual-migration run --rm migrate
+   ```
+8. Jalankan API dari host:
+   ```powershell
+   go mod download
+   go run ./cmd/server
+   ```
+9. API tersedia di `http://localhost:3000`. Untuk berhenti, tekan `Ctrl+C` pada terminal Go dan jalankan `docker compose stop postgres`. Data database tetap tersimpan di named volume.
+
+### Linux (Bash)
+
+1. Pasang Docker Engine + Docker Compose plugin, Go 1.25+, dan Git. Pastikan user dapat menjalankan `docker` tanpa masalah permission. Clone repository lalu masuk ke folder project.
+2. Buat file konfigurasi lokal:
+   ```bash
+   cp .env.docker.example .env.docker
+   cp .env.example .env.local
+   nano .env.docker
+   nano .env.local
+   ```
+3. Atur `.env.docker` seperti langkah Windows: pertahankan `POSTGRES_USER=christ_user` (dipakai healthcheck), isi password/database, lalu samakan `DB_USER`, `DB_PASSWORD`, `DB_NAME`; gunakan `DB_HOST=postgres`, `DB_PORT=5432`, dan `JWT_SECRET` lokal.
+4. Isi `ATTENDANCE_LATITUDE` dan `ATTENDANCE_LONGITUDE` di `.env.docker` dengan koordinat pin gereja. Salin pasangan yang sama ke `.env.local`. Ambil koordinat dari pin peta; radius server 500 meter. Precise location tidak diwajibkan.
+5. Atur `.env.local` dengan nilai database yang sama, tetapi `DB_HOST=localhost`, `DB_PORT=5433`, `DB_SSLMODE=disable`, `API_PORT=3000`, serta `JWT_SECRET`. Go berjalan di host sehingga tidak dapat memakai hostname service `postgres`.
+6. Jalankan **database saja**:
+   ```bash
+   docker compose up -d postgres
+   docker compose ps
+   docker compose logs postgres
+   ```
+7. Terapkan migration satu kali:
+   ```bash
+   docker compose --profile manual-migration run --rm migrate
+   ```
+8. Jalankan API dari host:
+   ```bash
+   go mod download
+   go run ./cmd/server
+   ```
+9. API tersedia di `http://localhost:3000`. Untuk berhenti, tekan `Ctrl+C` pada terminal Go lalu jalankan `docker compose stop postgres`. Named volume mempertahankan data.
+
+**Penting:** `.env.local` dan `.env.docker` hanya untuk mesin lokal dan tidak boleh di-commit. `docker compose down -v` menghapus volume PostgreSQL beserta seluruh datanya; jangan gunakan kecuali memang ingin menghapus database lokal.
+
+## Menjalankan Test
+
+Test unit tidak membutuhkan PostgreSQL atau server berjalan:
+
+```bash
+go test ./...
+```
+
+Perintah yang direkomendasikan sebelum membuat perubahan/PR:
+
+```bash
+go test ./...
+go vet ./...
+go build ./...
+```
+
+Test route saat ini memeriksa registrasi route, penolakan request tanpa token pada protected routes, dan validasi dasar untuk auth routes publik. Belum semua success flow handler dan query repository diuji; untuk smoke test endpoint dengan data nyata, jalankan database + migrations + API sesuai tutorial di atas. Integration test PostgreSQL perlu memakai database test terisolasi, bukan database pengguna/production.
+
+## Attendance Geofence dan Bacaan Harian
+
+### Check-in attendance
+
+FE meminta lokasi browser/perangkat setelah jemaat menekan tombol absen, lalu mengirim posisi perangkat—tanpa `site_id`, `activity_id`, titik tujuan, atau radius:
+
+```http
+POST /api/attendance/check-in
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{"latitude": -6.2000, "longitude": 106.8167, "accuracy_m": 18.5}
+```
+
+Backend mencocokkan posisi perangkat terhadap satu titik gereja dari `ATTENDANCE_LATITUDE` dan `ATTENDANCE_LONGITUDE`. Jarak maksimal 500 meter; tidak ada persyaratan precise location atau ambang akurasi perangkat. Satu check-in berhasil per tanggal Asia/Jakarta memberi 10 poin; pengulangan pada hari yang sama mendapat `409`.
+
+### Submission bacaan Alkitab harian
+
+FE mengirim object JSON fleksibel sebagai `payload` (maksimal 16 KB):
+
+```http
+POST /api/bible-reading-submissions
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+```json
+{"payload":{"reference":"Mazmur 23","reflection":"Tuhan memelihara saya.","source":"daily-reading"}}
+```
+
+Riwayat jemaat: `GET /api/bible-reading-submissions/me`. Antrean admin: `GET /api/admin/bible-reading-submissions?status=submitted`. Admin menyetujui dan memberi poin dalam satu request transaksional:
+
+```http
+POST /api/admin/bible-reading-submissions/:uuid/approve
+Authorization: Bearer <admin-token>
+Content-Type: application/json
+```
+
+```json
+{"points": 10}
+```
+
+Untuk menolak, `POST /api/admin/bible-reading-submissions/:uuid/reject` dengan body `{"note":"Alasan penolakan"}`. Jemaat boleh mengirim ulang pada hari yang sama setelah ditolak; submission sebelumnya tetap ada sebagai riwayat. Submission pending/approved membatasi pengajuan baru untuk hari tersebut, dan approval ganda tidak memberikan poin dua kali.
+
+## Catatan Production
+
+Compose dan file env pada repository ini ditujukan untuk development, bukan deployment production langsung. Untuk production:
+
+1. Siapkan PostgreSQL terkelola/terisolasi; jangan buka port database ke internet. Gunakan user database dengan hak minimum dan backup/restore yang sudah diuji.
+2. Inject `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`, `JWT_SECRET`, SMTP, dan Google OAuth dari secret manager/platform deployment. Jangan menyalin `.env.local` atau `.env.docker` ke server.
+3. Gunakan credential unik dan `JWT_SECRET` acak yang kuat. Set TLS database (`verify-full` bila CA/hostname dapat dikonfigurasi dengan benar) dan terminasi HTTPS pada load balancer/reverse proxy.
+4. Jalankan migration sebagai job rilis **satu kali** sebelum/bersamaan dengan deployment, misalnya melalui pipeline migration yang mengakses schema dari artifact. Jangan menjalankan beberapa migration job bersamaan dan jangan mengandalkan startup API untuk mengubah schema.
+5. Build dan deploy versi aplikasi yang sama pada seluruh instance. Atur `CORS_ORIGINS` hanya untuk domain frontend yang dipercaya dan gunakan `API_PORT` sesuai platform.
+6. Upload saat ini disimpan di filesystem lokal aplikasi. Sebelum menjalankan banyak instance atau mengganti container, siapkan storage persisten yang sesuai (misalnya object storage atau volume terkelola) dan backup file upload.
+
+Lakukan rollout dan rollback pada staging terlebih dahulu. Down migration tertentu bersifat destruktif; backup dan persetujuan data owner diperlukan sebelum rollback.
+
 ---
 
 ## 📚 Dokumentasi Utama
@@ -109,7 +252,7 @@ ChristAPI/
 │   ├── jwt/             → JWT utilities
 │   └── response/        → Response formatting
 ├── routes/              → API endpoints registration
-├── migrations/          → SQL migrations (auto-run on setup)
+├── migrations/          → SQL migrations versioned, dijalankan one-shot
 ├── docs/                → API documentation & schema
 ├── .githooks/           → Git hooks (pre-commit format check)
 ├── SETUP.md             → 👈 Start here!
@@ -164,8 +307,7 @@ POST   /api/resend-otp              → Resend OTP
 ```
 GET    /api/admin/roles             → List all roles (admin-only)
 POST   /api/admin/roles             → Create role (admin-only)
-PUT    /api/admin/roles/:id         → Update role (admin-only)
-DELETE /api/admin/roles/:id         → Delete role (admin-only)
+PATCH  /api/admin/roles/:id         → Update role (admin-only)
 ```
 
 Each role has:
@@ -200,6 +342,7 @@ Each role has:
 **News & Articles**
 - CRUD operations
 - Site-based organization
+- Public read endpoint: `GET /api/news` (only published, non-deleted news); admin management stays under `/api/admin/news`
 
 **Points System**
 - User points tracking
@@ -286,17 +429,14 @@ refactor(contacts): improve validation logic
 go test ./...
 ```
 
-**Strategy:**
-- **Service tests:** Mock the Repository interface (unit tests)
-- **Repository tests:** Use `github.com/DATA-DOG/go-sqlmock` to avoid needing a real database
-- **Handler tests:** Use Fiber's app with `httptest` or run the server locally with Postman/curl
+Test yang ada saat ini mencakup aturan/unit tertentu dan route guard. Belum semua service, handler, repository, maupun query database memiliki test; jangan menganggap `go test ./...` sebagai pengganti integration test PostgreSQL.
 
 **Example requests:**
 ```bash
 # Register
 curl -X POST http://localhost:3001/api/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"securepass123"}'
+  -d '{"full_name":"User Example","email":"user@example.com","password":"securepass123"}'
 
 # Login with OTP
 curl -X POST http://localhost:3001/api/verify-otp \
@@ -308,9 +448,9 @@ curl -X POST http://localhost:3001/api/resend-otp \
   -H "Content-Type: application/json" \
   -d '{"email":"user@example.com"}'
 
-# Get current user (requires JWT token in Authorization header)
+# Get current user profile (requires JWT token in Authorization header)
 curl -H "Authorization: Bearer <token>" \
-  http://localhost:3001/api/auth/me
+  http://localhost:3001/api/profile
 
 # Admin: List roles
 curl -H "Authorization: Bearer <admin-token>" \
@@ -321,19 +461,30 @@ curl -H "Authorization: Bearer <admin-token>" \
 
 ## 📦 Migrations
 
-**Automatic setup:**
-- Migrations run automatically on `dalamNamaTuhan.ps1` (Windows) or Docker startup
-- Located in `migrations/` folder with sequential numbering (0001_, 0002_, etc.)
+Schema dikelola oleh pasangan file SQL bernomor di `migrations/`, bukan oleh snapshot `docs/schema.sql`. Pada workflow database lokal + Go di host, jalankan PostgreSQL lalu terapkan migration one-shot:
 
-**Manual migration (if needed):**
 ```bash
-psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f migrations/0001_initial_schema.sql
+docker compose up -d postgres
+docker compose --profile manual-migration run --rm migrate
 ```
 
-**Adding a new migration:**
-1. Create `migrations/NNNN_description.sql`
-2. Use parameterized SQL only
-3. Test locally with Docker: `docker-compose up --build`
+Jalankan perintah migration lagi setelah menambahkan versi baru; migration yang sudah tercatat tidak dijalankan ulang. Untuk melihat versi yang sudah diterapkan:
+
+```bash
+docker compose --profile manual-migration run --rm \
+  -e MIGRATION_ACTION=version migrate
+```
+
+Untuk mencoba rollback satu versi pada **database development disposable saja**:
+
+```bash
+docker compose --profile manual-migration run --rm \
+  -e MIGRATION_ACTION=down -e MIGRATION_STEPS=1 migrate
+```
+
+> **Peringatan:** beberapa down migration menghapus data. Khusus migration attendance, rollback menjatuhkan tabel attendance. Jangan menjalankan `down` pada production tanpa backup, rencana pemulihan, dan persetujuan.
+
+Migration baru harus memiliki pasangan `N_description.up.sql` dan `N_description.down.sql`, diuji pada database disposable, serta direview untuk efek data/lock sebelum rilis. Format penamaan mengikuti migration terakhir yang ada di folder.
 
 ---
 

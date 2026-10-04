@@ -50,6 +50,10 @@
             "value": ""
         },
         {
+            "key": "bibleReadingSubmissionUuid",
+            "value": ""
+        },
+        {
             "key": "contactId",
             "value": "1"
         }
@@ -747,7 +751,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"title\": \"Community service\",\n  \"description\": \"Demo activity\",\n  \"category_id\": 1,\n  \"activity_type\": \"one_time\",\n  \"status\": \"published\",\n  \"max_participants\": null,\n  \"requires_registration\": false,\n  \"streak_enabled\": true,\n  \"streak_type\": \"daily_activity\",\n  \"streak_points\": 5,\n  \"occurrence\": {\n    \"starts_at\": \"2026-09-16T09:00:00Z\",\n    \"ends_at\": null,\n    \"location\": \"Church hall\",\n    \"status\": \"scheduled\",\n    \"notes\": null\n  }\n}"
+                            "raw": "{\n  \"title\": \"Community service\",\n  \"description\": \"Demo activity\",\n  \"category_id\": 1,\n  \"activity_type\": \"one_time\",\n  \"status\": \"published\",\n  \"max_participants\": null,\n  \"requires_registration\": false,\n  \"streak_enabled\": true,\n  \"streak_type\": \"daily_activity\",\n  \"streak_points\": 5,\n  \"occurrence\": {\n    \"starts_at\": \"2026-09-16T09:00:00Z\",\n    \"ends_at\": null,\n    \"location\": \"Church hall\",\n    \"latitude\": -6.2000,\n    \"longitude\": 106.8167,\n    \"status\": \"scheduled\",\n    \"notes\": null\n  }\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/admin/activities",
@@ -880,7 +884,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Main site\",\n  \"address\": \"Main street\"\n}"
+                            "raw": "{\n  \"name\": \"Main site\",\n  \"address\": \"Main street\",\n  \"latitude\": -6.2000,\n  \"longitude\": 106.8167\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/admin/sites",
@@ -916,7 +920,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"name\": \"Updated site name\"\n}"
+                            "raw": "{\n  \"name\": \"Updated site name\",\n  \"latitude\": -6.2000,\n  \"longitude\": 106.8167\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/admin/sites/{{siteUuid}}",
@@ -1132,7 +1136,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"amount\": 10,\n  \"reason\": \"Admin reward\",\n  \"reference_id\": \"admin-demo-001\"\n}"
+                            "raw": "{\n  \"user_id\": 1,\n  \"amount\": 10,\n  \"reason\": \"Admin reward\",\n  \"reference_id\": \"admin-demo-001\"\n}"
                         },
                         "url": {
                             "raw": "{{baseUrl}}/admin/points/earn",
@@ -1277,6 +1281,67 @@
                                 "image"
                             ]
                         }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Geofence and daily Bible reading",
+            "item": [
+                {
+                    "name": "Check in with device location",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+                        "body": {"mode": "raw", "raw": "{\n  \"latitude\": -6.2000,\n  \"longitude\": 106.8167,\n  \"accuracy_m\": 18.5\n}"},
+                        "url": {"raw": "{{baseUrl}}/attendance/check-in", "host": ["{{baseUrl}}", "attendance", "check-in"]}
+                    }
+                },
+                {
+                    "name": "Submit daily Bible reading",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+                        "body": {"mode": "raw", "raw": "{\n  \"payload\": {\n    \"reference\": \"Mazmur 23\",\n    \"reflection\": \"Tuhan memelihara saya.\"\n  }\n}"},
+                        "url": {"raw": "{{baseUrl}}/bible-reading-submissions", "host": ["{{baseUrl}}", "bible-reading-submissions"]}
+                    }
+                },
+                {
+                    "name": "List my daily Bible readings",
+                    "request": {
+                        "method": "GET",
+                        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{token}}", "type": "string"}]},
+                        "url": {"raw": "{{baseUrl}}/bible-reading-submissions/me", "host": ["{{baseUrl}}", "bible-reading-submissions", "me"]}
+                    }
+                },
+                {
+                    "name": "Admin list Bible readings pending review",
+                    "request": {
+                        "method": "GET",
+                        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+                        "url": {"raw": "{{baseUrl}}/admin/bible-reading-submissions?status=submitted", "host": ["{{baseUrl}}", "admin", "bible-reading-submissions"], "query": [{"key": "status", "value": "submitted"}]}
+                    }
+                },
+                {
+                    "name": "Admin approve Bible reading and award points",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+                        "body": {"mode": "raw", "raw": "{\n  \"points\": 10\n}"},
+                        "url": {"raw": "{{baseUrl}}/admin/bible-reading-submissions/{{bibleReadingSubmissionUuid}}/approve", "host": ["{{baseUrl}}", "admin", "bible-reading-submissions", "{{bibleReadingSubmissionUuid}}", "approve"]}
+                    }
+                },
+                {
+                    "name": "Admin reject Bible reading",
+                    "request": {
+                        "method": "POST",
+                        "header": [{"key": "Content-Type", "value": "application/json"}],
+                        "auth": {"type": "bearer", "bearer": [{"key": "token", "value": "{{adminToken}}", "type": "string"}]},
+                        "body": {"mode": "raw", "raw": "{\n  \"note\": \"Mohon lengkapi refleksi bacaan.\"\n}"},
+                        "url": {"raw": "{{baseUrl}}/admin/bible-reading-submissions/{{bibleReadingSubmissionUuid}}/reject", "host": ["{{baseUrl}}", "admin", "bible-reading-submissions", "{{bibleReadingSubmissionUuid}}", "reject"]}
                     }
                 }
             ]

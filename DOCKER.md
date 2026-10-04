@@ -6,21 +6,23 @@
 
 ## Quick Start
 
-### 1. Create `.env` file
-Docker compose sudah memakai `.env.docker` yang ada di root project.
-Kalau perlu ubah credential atau port, edit file itu lalu jalankan `docker compose up -d`.
+### 1. Create local Docker environment file
+Salin `.env.docker.example` menjadi `.env.docker`, lalu isi nilai lokal. `.env.docker` diabaikan Git dan tidak boleh berisi credential production yang dikelola di luar workstation.
 
-Kalau `JWT_SECRET` kosong, aplikasi akan gagal start. Ini sengaja supaya tidak jalan dengan secret default yang lemah.
+`JWT_SECRET` harus diisi; aplikasi memang menolak startup jika secret kosong.
 
-### 2. Build dan Run dengan Docker Compose
+### 2. Build dan Run dengan helper
 ```bash
-docker-compose up -d
+./dalamNamaTuhan.sh
 ```
 
 Ini akan:
 - Build image Go aplikasi
 - Start PostgreSQL database
 - Start API server pada host port 3001, dengan port internal container 3000
+- Jalankan migration satu kali setelah PostgreSQL siap
+
+Untuk menjalankan service tanpa helper, start `postgres` dan `api`, lalu jalankan migration sebagai one-shot: `docker compose --profile manual-migration run --rm migrate`.
 
 ### 3. Verify Services Running
 ```bash
@@ -54,7 +56,7 @@ docker-compose build --no-cache
 
 #### Access Database
 ```bash
-docker-compose exec postgres psql -U christ_user -d christ_db
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
 #### Access API Container Shell
@@ -130,7 +132,7 @@ docker compose down -v
 Untuk production, pastikan untuk:
 
 1. **Change Database Credentials**
-   - Update `DB_USER`, `DB_PASSWORD` di `.env`
+   - Atur `DB_USER`, `DB_PASSWORD`, `POSTGRES_USER`, dan `POSTGRES_PASSWORD` melalui secret store/environment deployment
 
 2. **Change JWT Secret**
    - Generate secret yang kuat untuk `JWT_SECRET`
@@ -180,9 +182,9 @@ Untuk production, pastikan untuk:
 - Wait beberapa detik untuk database startup
 
 ### "Database does not exist" error
-- Pastikan `schema.sql` ada di `docs/` folder
-- Volume belum ter-mount dengan benar
-- Try `docker-compose down -v && docker-compose up -d` untuk reset database
+- Periksa nama database di environment Docker lokal
+- Pastikan volume PostgreSQL yang benar sedang digunakan
+- Jalankan migration one-shot setelah PostgreSQL healthy
 
 ### Port 3000 already in use
 Ubah port di `docker-compose.yml`:
