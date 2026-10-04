@@ -3,6 +3,7 @@ package activities
 import (
 	"database/sql"
 	"errors"
+	"math"
 	"strings"
 
 	"christ-api/internal/activities/dto/requests"
@@ -47,6 +48,11 @@ func (s *Service) Update(uuid string, req *requests.UpdateActivityRequest) (*Act
 }
 
 func validateUpdateRequest(req *requests.UpdateActivityRequest) error {
+	if req.Present["occurrence"] && req.Occurrence != nil {
+		if err := validateOccurrenceCoordinates(req.Occurrence.Latitude, req.Occurrence.Longitude); err != nil {
+			return err
+		}
+	}
 	if req.Present["title"] && (req.Title == nil || strings.TrimSpace(*req.Title) == "") {
 		return errors.New("title cannot be empty")
 	}
@@ -124,6 +130,22 @@ func validateRequest(req *requests.CreateActivityRequest) error {
 		}
 	} else if req.Occurrence == nil || req.Occurrence.StartsAt.IsZero() {
 		return errors.New("occurrence.starts_at is required for one-time activities")
+	}
+	if req.Occurrence != nil {
+		if err := validateOccurrenceCoordinates(req.Occurrence.Latitude, req.Occurrence.Longitude); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateOccurrenceCoordinates(latitude, longitude *float64) error {
+	if latitude == nil && longitude == nil {
+		return nil
+	}
+	if latitude == nil || longitude == nil || math.IsNaN(*latitude) || math.IsInf(*latitude, 0) ||
+		math.IsNaN(*longitude) || math.IsInf(*longitude, 0) || *latitude < -90 || *latitude > 90 || *longitude < -180 || *longitude > 180 {
+		return errors.New("occurrence latitude and longitude must both be valid coordinates")
 	}
 	return nil
 }

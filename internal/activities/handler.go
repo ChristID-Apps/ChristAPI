@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"christ-api/internal/activities/dto/requests"
+	"christ-api/internal/uploadimage"
 	"christ-api/pkg/response"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,10 +25,11 @@ func NewHandler(repo *Repository) *Handler {
 }
 
 func (h *Handler) List(c *fiber.Ctx) error {
+	isAdmin, _ := c.Locals("is_admin").(bool)
 	filter := ActivityFilter{
 		Search:       c.Query("search"),
 		ActivityType: c.Query("activity_type"),
-		Status:       c.Query("status"),
+		Status:       activityStatusFilter(isAdmin, c.Query("status")),
 		Limit:        parseIntDefault(c.Query("limit"), 20),
 		Offset:       parseIntDefault(c.Query("offset"), 0),
 	}
@@ -61,6 +63,7 @@ func (h *Handler) Categories(c *fiber.Ctx) error {
 }
 
 func (h *Handler) Get(c *fiber.Ctx) error {
+	isAdmin, _ := c.Locals("is_admin").(bool)
 	item, err := h.service.Get(c.Params("uuid"))
 	if err != nil {
 		if isNotFound(err) {
@@ -68,7 +71,21 @@ func (h *Handler) Get(c *fiber.Ctx) error {
 		}
 		return response.ErrorDetail(c, 500, "Failed to retrieve activity", err)
 	}
+	if !activityVisibleToUser(isAdmin, item.Status) {
+		return response.Error(c, 404, "Activity not found", nil)
+	}
 	return response.Success(c, "Activity retrieved", item)
+}
+
+func activityStatusFilter(isAdmin bool, requested string) string {
+	if !isAdmin {
+		return "published"
+	}
+	return requested
+}
+
+func activityVisibleToUser(isAdmin bool, status string) bool {
+	return isAdmin || status == "published"
 }
 
 func (h *Handler) Create(c *fiber.Ctx) error {
@@ -302,14 +319,15 @@ func (h *Handler) UploadImage(c *fiber.Ctx) error {
 	if err != nil {
 		return response.ErrorDetail(c, 422, "Activity image is required", err)
 	}
-	if file.Size > 5*1024*1024 {
+	extension, err := uploadimage.Validate(file)
+	if err == uploadimage.ErrTooLarge {
 		return response.Error(c, 422, "Activity image is too large", fiber.Map{"detail": "maximum image size is 5 MB"})
 	}
-
-	extension := strings.ToLower(filepath.Ext(file.Filename))
-	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
-	if !allowed[extension] {
+	if err == uploadimage.ErrUnsupported {
 		return response.Error(c, 422, "Unsupported activity image format", fiber.Map{"detail": "allowed formats: jpg, jpeg, png, webp"})
+	}
+	if err != nil {
+		return response.ErrorDetail(c, 500, "Failed to inspect activity image", err)
 	}
 
 	directory := filepath.Join("uploads", "activities")

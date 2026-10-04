@@ -53,15 +53,18 @@ type ActivitySchedule struct {
 }
 
 type ActivityOccurrence struct {
-	ID       int64      `json:"id"`
-	StartsAt time.Time  `json:"starts_at"`
-	EndsAt   *time.Time `json:"ends_at,omitempty"`
-	Location *string    `json:"location,omitempty"`
-	Status   string     `json:"status"`
-	Notes    *string    `json:"notes,omitempty"`
+	ID        int64      `json:"id"`
+	StartsAt  time.Time  `json:"starts_at"`
+	EndsAt    *time.Time `json:"ends_at,omitempty"`
+	Location  *string    `json:"location,omitempty"`
+	Latitude  *float64   `json:"latitude,omitempty"`
+	Longitude *float64   `json:"longitude,omitempty"`
+	Status    string     `json:"status"`
+	Notes     *string    `json:"notes,omitempty"`
 }
 
 type ActivityFilter struct {
+	UUID         string
 	Search       string
 	CategoryID   *int64
 	ActivityType string

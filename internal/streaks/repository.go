@@ -14,6 +14,7 @@ type Repository struct {
 var (
 	ErrActivityNotEligible = errors.New("activity is not configured for streaks")
 	ErrInvalidActivity     = errors.New("activity not found")
+	ErrAttendanceRequired  = errors.New("attendance check-in required before streak check-in")
 )
 
 func (r *Repository) CheckIn(userID int64, activityUUID string, now time.Time) (*CheckInResult, error) {
@@ -46,6 +47,16 @@ func (r *Repository) CheckIn(userID int64, activityUUID string, now time.Time) (
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrActivityNotEligible
 		}
+		return nil, err
+	}
+	var hasAttendance bool
+	attendanceDate := localDate.Format("2006-01-02")
+	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM attendance_records WHERE user_id=$1 AND attendance_date=$2)`, userID, attendanceDate).Scan(&hasAttendance); err != nil {
+		rollback()
+		return nil, err
+	}
+	if err := validateAttendanceRecord(hasAttendance); err != nil {
+		rollback()
 		return nil, err
 	}
 	streakType = "daily_activity"
@@ -141,6 +152,13 @@ func (r *Repository) CheckIn(userID int64, activityUUID string, now time.Time) (
 		return nil, err
 	}
 	return &CheckInResult{StreakType: streakType, ActivityDate: periodDate, CurrentStreak: current, LongestStreak: longest, PointsEarned: reward, StreakUpdated: streakUpdated}, nil
+}
+
+func validateAttendanceRecord(hasAttendance bool) error {
+	if !hasAttendance {
+		return ErrAttendanceRequired
+	}
+	return nil
 }
 
 func (r *Repository) List(userID int64) ([]Streak, error) {

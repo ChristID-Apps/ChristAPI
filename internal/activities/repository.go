@@ -51,7 +51,7 @@ func (r *Repository) List(filter ActivityFilter) ([]Activity, error) {
 			a.requires_registration, a.streak_enabled, a.streak_type, a.streak_points, a.created_at, a.updated_at,
 			s.id, s.frequency, s.interval_value, s.days_of_week, s.day_of_month,
 			s.start_date, s.end_date, s.start_time, s.end_time, s.timezone,
-			o.id, o.starts_at, o.ends_at, o.location, o.status, o.notes
+			o.id, o.starts_at, o.ends_at, o.location, o.latitude, o.longitude, o.status, o.notes
 			, b.version_code, b.book_code, b.start_chapter, b.start_verse, b.end_chapter, b.end_verse,
 			 b.requires_reflection, b.reflection_prompt, b.reflection_min_length
 		FROM activities a
@@ -62,6 +62,11 @@ func (r *Repository) List(filter ActivityFilter) ([]Activity, error) {
 		WHERE a.deleted_at IS NULL`
 	args := make([]interface{}, 0, 6)
 	argIndex := 1
+	if filter.UUID != "" {
+		query += fmt.Sprintf(" AND a.uuid = $%d", argIndex)
+		args = append(args, filter.UUID)
+		argIndex++
+	}
 	if filter.Search != "" {
 		query += fmt.Sprintf(" AND (a.title ILIKE $%d OR a.description ILIKE $%d)", argIndex, argIndex)
 		args = append(args, "%"+filter.Search+"%")
@@ -111,7 +116,10 @@ func (r *Repository) List(filter ActivityFilter) ([]Activity, error) {
 }
 
 func (r *Repository) GetByUUID(uuid string) (*Activity, error) {
-	items, err := r.List(ActivityFilter{Search: "", Limit: 100})
+	if uuid == "" {
+		return nil, sql.ErrNoRows
+	}
+	items, err := r.List(ActivityFilter{UUID: uuid, Limit: 1})
 	if err != nil {
 		return nil, err
 	}
@@ -343,6 +351,7 @@ func scanActivity(row interface{ Scan(...interface{}) error }) (*Activity, error
 	var occurrenceID sql.NullInt64
 	var startsAt, endsAt sql.NullTime
 	var location, occurrenceStatus, notes sql.NullString
+	var occurrenceLatitude, occurrenceLongitude sql.NullFloat64
 	var bibleVersion, bibleBook, biblePrompt sql.NullString
 	var bibleStartChapter, bibleStartVerse, bibleEndChapter, bibleEndVerse, bibleMinLength sql.NullInt64
 	var bibleReflection sql.NullBool
@@ -350,7 +359,7 @@ func scanActivity(row interface{ Scan(...interface{}) error }) (*Activity, error
 	err := row.Scan(&a.ID, &a.UUID, &a.Title, &description, &imageURL, &a.CategoryID, &a.CategoryCode, &a.CategoryName,
 		&a.ActivityType, &siteID, &createdBy, &a.Status, &maxParticipants, &a.RequiresRegistration, &streakEnabled, &streakType, &streakPoints, &createdAt, &updatedAt,
 		&scheduleID, &frequency, &intervalValue, &daysJSON, &dayOfMonth, &scheduleStartDate, &endDate, &startTime, &endTime, &timezone,
-		&occurrenceID, &startsAt, &endsAt, &location, &occurrenceStatus, &notes,
+		&occurrenceID, &startsAt, &endsAt, &location, &occurrenceLatitude, &occurrenceLongitude, &occurrenceStatus, &notes,
 		&bibleVersion, &bibleBook, &bibleStartChapter, &bibleStartVerse, &bibleEndChapter, &bibleEndVerse, &bibleReflection, &biblePrompt, &bibleMinLength)
 	if err != nil {
 		return nil, err
@@ -415,6 +424,14 @@ func scanActivity(row interface{ Scan(...interface{}) error }) (*Activity, error
 		if location.Valid {
 			o.Location = &location.String
 		}
+		if occurrenceLatitude.Valid {
+			v := occurrenceLatitude.Float64
+			o.Latitude = &v
+		}
+		if occurrenceLongitude.Valid {
+			v := occurrenceLongitude.Float64
+			o.Longitude = &v
+		}
 		if notes.Valid {
 			o.Notes = &notes.String
 		}
@@ -453,7 +470,7 @@ func insertOccurrence(tx *sql.Tx, activityID int64, req *requests.OccurrenceRequ
 	if status == "" {
 		status = "scheduled"
 	}
-	_, err := tx.Exec(`INSERT INTO activity_occurrences (activity_id, starts_at, ends_at, location, status, notes) VALUES ($1,$2,$3,$4,$5,$6)`, activityID, req.StartsAt, req.EndsAt, req.Location, status, req.Notes)
+	_, err := tx.Exec(`INSERT INTO activity_occurrences (activity_id, starts_at, ends_at, location, latitude, longitude, status, notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, activityID, req.StartsAt, req.EndsAt, req.Location, req.Latitude, req.Longitude, status, req.Notes)
 	return err
 }
 
