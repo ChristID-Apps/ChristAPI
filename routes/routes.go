@@ -6,6 +6,7 @@ import (
 	"christ-api/internal/attendance"
 	"christ-api/internal/auth"
 	"christ-api/internal/bible"
+	"christ-api/internal/biblereadings"
 	"christ-api/internal/contacts"
 	"christ-api/internal/middleware"
 	"christ-api/internal/news"
@@ -29,6 +30,7 @@ func Setup(app *fiber.App) {
 	roleHandler := role.NewHandler(roleRepository)
 	pointsHandler := points.NewHandler(&points.Repository{DB: database.DB})
 	attendanceHandler := attendance.NewHandler(&attendance.Repository{DB: database.DB})
+	bibleReadingHandler := biblereadings.NewHandler(&biblereadings.Repository{DB: database.DB})
 	streakHandler := streaks.NewHandler(&streaks.Repository{DB: database.DB})
 	newsHandler := news.NewHandler(&news.NewsRepository{DB: database.DB})
 	rewardsHandler := rewards.NewHandler(&rewards.Repository{DB: database.DB})
@@ -51,6 +53,7 @@ func Setup(app *fiber.App) {
 	api.Post("/resend-otp", authHandler.ResendOTP)
 	api.Post("/auth/google", authHandler.LoginGoogle)
 	api.Post("/auth/google/username", authHandler.SubmitGoogleUsername)
+	api.Get("/news", newsHandler.List)
 
 	// protected routes
 	protected := api.Group("/", middleware.AuthMiddleware)
@@ -74,6 +77,8 @@ func Setup(app *fiber.App) {
 	adminRoutes.Patch("/roles/:id", roleHandler.Update)
 
 	// activities (admin only)
+	adminRoutes.Get("/activities", activityHandler.List)
+	adminRoutes.Get("/activities/:uuid", activityHandler.Get)
 	adminRoutes.Post("/activities", activityHandler.Create)
 	adminRoutes.Patch("/activities/:uuid", activityHandler.Update)
 	adminRoutes.Delete("/activities/:uuid", activityHandler.Delete)
@@ -82,6 +87,9 @@ func Setup(app *fiber.App) {
 	adminRoutes.Get("/activity-submissions", submissionHandler.AdminList)
 	adminRoutes.Post("/activity-submissions/:uuid/approve", submissionHandler.Approve)
 	adminRoutes.Post("/activity-submissions/:uuid/reject", submissionHandler.Reject)
+	adminRoutes.Get("/bible-reading-submissions", bibleReadingHandler.AdminList)
+	adminRoutes.Post("/bible-reading-submissions/:uuid/approve", bibleReadingHandler.Approve)
+	adminRoutes.Post("/bible-reading-submissions/:uuid/reject", bibleReadingHandler.Reject)
 
 	// sites (admin only)
 	adminRoutes.Post("/sites", sitesHandler.Create)
@@ -117,6 +125,8 @@ func Setup(app *fiber.App) {
 	protected.Get("/activities/:uuid", activityHandler.Get)
 	protected.Post("/activities/:uuid/submit", submissionHandler.Submit)
 	protected.Get("/activity-submissions/me", submissionHandler.Mine)
+	protected.Post("/bible-reading-submissions", bibleReadingHandler.Submit)
+	protected.Get("/bible-reading-submissions/me", bibleReadingHandler.Mine)
 
 	// sites
 	protected.Get("/sites", sitesHandler.List)
@@ -142,6 +152,6 @@ func Setup(app *fiber.App) {
 	protected.Post("/streaks/check-in", streakHandler.CheckIn)
 
 	// news
-	protected.Get("/news", newsHandler.List)
+	adminRoutes.Get("/news", newsHandler.List)
 	adminRoutes.Post("/news/:uuid/image", newsHandler.UploadImage)
 }
