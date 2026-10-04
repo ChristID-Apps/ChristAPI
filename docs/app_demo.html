@@ -1358,7 +1358,7 @@
                 '<div class="v">' + current + "</div>" +
                 '<div class="sub">hari berturut-turut · rekor ' + best + " hari</div>" +
                 '<div class="dots" aria-hidden="true">' + Array.from({ length: 7 }, (_, i) => '<i class="' + (i < Math.min(current, 7) ? "on" : "") + '"></i>').join("") + "</div>" +
-                '<p class="sub" style="margin-top:14px">Satu check-in kegiatan per hari sudah menjaga streak, dari kategori mana pun.</p>' +
+                '<p class="sub" style="margin-top:14px">Satu kali absen per hari sudah menjaga streak.</p>' +
                 "</div>" +
                 '<div class="card metric"><div class="k">Saldo point</div><div class="v brass">' + balance + '</div><div class="sub">siap ditukar di halaman Reward</div></div>' +
                 '<div class="card metric"><div class="k">Kehadiran tercatat</div><div class="v">' + num(attendance.present) + '</div><div class="sub">' + num(attendance.late) + " terlambat · " + num(attendance.excused) + " izin</div></div>" +
@@ -1367,6 +1367,9 @@
                 '<div class="sub">' + h(state.user.role || "Anggota") + "</div></div>" +
                 "</div>" +
                 '<div class="grid g2" style="margin-top:16px">' +
+                '<div class="card"><div class="card-head"><div><h2>Absensi hari ini</h2>' +
+                '<p class="muted small" style="margin:4px 0 0">Tekan absen saat berada di lokasi gereja atau kegiatan. Lokasi akan dicek otomatis.</p></div></div>' +
+                '<button class="btn" type="button" data-act="checkin" data-busy-label="Memeriksa lokasi...">' + icon("check", 16) + " Absen sekarang · +10 point</button></div>" +
                 '<div class="card"><div class="card-head"><h2>Kegiatan terdekat</h2>' +
                 '<button class="btn quiet" type="button" data-act="go" data-page="activities">Lihat semua</button></div>' +
                 (activities.length ? activities.map(item =>
@@ -1375,7 +1378,7 @@
                     '<div style="min-width:0;flex:1"><strong>' + h(item.title) + "</strong>" +
                     '<div class="small muted">' + h(item.category_name || "Tanpa kategori") + " · " +
                     (item.occurrence?.starts_at ? fmtDateTime(item.occurrence.starts_at) : item.schedule?.frequency ? "rutin " + h(item.schedule.frequency) : "jadwal menyusul") + "</div></div>" +
-                    '<button class="btn sm" type="button" data-act="checkin" data-uuid="' + h(item.uuid) + '">Absen</button></div>'
+                    "</div>"
                 ).join("") : emptyState("Belum ada kegiatan", "Kegiatan yang sudah diterbitkan admin akan muncul di sini.")) +
                 "</div>" +
                 '<div class="card"><h2>Cara mengumpulkan point</h2>' +
@@ -1561,7 +1564,6 @@
                 "<td>" + statusBadge(item.status) + "</td>" +
                 "<td>" + (item.streak_enabled ? '<span class="badge brass">' + icon("flame", 12) + " +" + num(item.streak_points) + "</span>" : '<span class="muted">-</span>') + "</td>" +
                 '<td><div class="actions">' +
-                '<button class="btn sm" type="button" data-act="checkin" data-uuid="' + uuid + '" data-busy-label="Mengabsen...">Absen</button>' +
                 (item.bible_config ? '<button class="btn ghost sm" type="button" data-act="bible-task" data-uuid="' + uuid + '">Baca</button>' : "") +
                 (isAdmin() ? '<button class="btn ghost sm" type="button" data-act="activity-edit" data-uuid="' + uuid + '" aria-label="Ubah kegiatan">' + icon("edit", 15) + "</button>" +
                     '<button class="btn ghost sm" type="button" data-act="activity-delete" data-uuid="' + uuid + '" aria-label="Hapus kegiatan">' + icon("trash", 15) + "</button>" : "") +
@@ -1570,15 +1572,25 @@
 
         /* ---------- absensi + streak ---------- */
         ACTIONS.checkin = async ({ uuid }, button) => {
-            const item = state.cache.get(uuid);
-            if (!item) return toast("Data kegiatan sudah berubah. Muat ulang daftarnya.", "warn");
+            const item = uuid ? state.cache.get(uuid) : null;
+            if (uuid && !item) return toast("Data kegiatan sudah berubah. Muat ulang daftarnya.", "warn");
             await withBusy(button, async () => {
                 const messages = [];
                 let earned = 0;
                 try {
+                    if (!navigator.geolocation) throw new Error("Browser tidak menyediakan akses lokasi.");
+                    const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
+                        resolve,
+                        error => reject(new Error(error.code === 1 ? "Izin lokasi ditolak." : "Lokasi perangkat tidak dapat diperoleh.")),
+                        { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 }
+                    ));
                     const attendance = await api("/attendance/check-in", {
                         method: "POST",
-                        body: JSON.stringify({ activity_id: item.id, site_id: item.site_id ?? null, notes: null })
+                        body: JSON.stringify({
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy_m: position.coords.accuracy
+                        })
                     });
                     earned += num(dataOf(attendance).points_earned);
                     messages.push("Kehadiran tercatat");
@@ -1586,7 +1598,7 @@
                     if (error.status !== 409) return toastError(error);
                     messages.push("Kehadiran hari ini sudah tercatat");
                 }
-                if (item.streak_enabled) {
+                if (item?.streak_enabled) {
                     try {
                         const streak = dataOf(await api("/streaks/check-in", { method: "POST", body: JSON.stringify({ activity_uuid: item.uuid }) }));
                         earned += num(streak.points_earned);
@@ -1837,9 +1849,9 @@
                         ? "<h3>" + h(config.reflection_prompt || "Apa kesimpulan Anda?") + "</h3>" +
                         '<p class="muted small">Minimal ' + num(config.reflection_min_length, 1) + ' karakter.</p>' +
                         '<textarea id="reflection" placeholder="Tulis kesimpulan Anda..."></textarea>' +
-                        '<div class="row" style="margin-top:12px"><button class="btn" type="button" data-act="submit-task" data-uuid="' + h(uuid) + '" data-min="' + num(config.reflection_min_length, 1) + '" data-busy-label="Mengirim...">Kirim kesimpulan</button>' +
+                        '<div class="row" style="margin-top:12px"><button class="btn" type="button" data-act="submit-task" data-uuid="' + h(uuid) + '" data-reference="' + h(reference) + '" data-title="' + h(activity.title) + '" data-min="' + num(config.reflection_min_length, 1) + '" data-busy-label="Mengirim...">Kirim kesimpulan</button>' +
                         '<span class="small muted" id="reflection-count">0 karakter</span></div>'
-                        : '<button class="btn" type="button" data-act="submit-task" data-uuid="' + h(uuid) + '" data-min="0" data-busy-label="Menyimpan...">Tandai selesai dibaca</button>') +
+                        : '<button class="btn" type="button" data-act="submit-task" data-uuid="' + h(uuid) + '" data-reference="' + h(reference) + '" data-title="' + h(activity.title) + '" data-min="0" data-busy-label="Menyimpan...">Tandai selesai dibaca</button>') +
                     "</div></article>";
                 const area = $("#reflection");
                 if (area) area.addEventListener("input", () => { $("#reflection-count").textContent = area.value.trim().length + " karakter"; });
@@ -1849,7 +1861,7 @@
             }
         }
 
-        ACTIONS["submit-task"] = async ({ uuid, min }, button) => {
+        ACTIONS["submit-task"] = async ({ uuid, min, reference, title }, button) => {
             const answer = $("#reflection")?.value.trim() || null;
             const minimum = num(min);
             if (minimum && (!answer || answer.length < minimum)) {
@@ -1857,7 +1869,10 @@
             }
             await withBusy(button, async () => {
                 try {
-                    await api("/activities/" + encodeURIComponent(uuid) + "/submit", { method: "POST", body: JSON.stringify({ answer_text: answer }) });
+                    await api("/bible-reading-submissions", {
+                        method: "POST",
+                        body: JSON.stringify({ payload: { activity_uuid: uuid, activity_title: title, reference, answer_text: answer } })
+                    });
                     toast("Terkirim. Admin akan meninjau renungan Anda.");
                     navigate("tasks");
                 } catch (error) { toastError(error); }
@@ -1869,16 +1884,17 @@
          * ===================================================================== */
         async function pageSubmissions(seq) {
             try {
-                const items = listOf(await api("/activity-submissions/me"));
+                const items = listOf(await api("/bible-reading-submissions/me"));
                 paint(seq, head(ROUTES.tasks) +
-                    '<div class="table-wrap"><table><thead><tr><th>Kegiatan</th><th>Jawaban</th><th>Status</th><th>Catatan admin</th><th>Dikirim</th></tr></thead><tbody>' +
+                    '<div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Bacaan</th><th>Payload</th><th>Status</th><th>Catatan admin</th><th>Poin</th></tr></thead><tbody>' +
                     (items.length ? items.map(item => "<tr>" +
-                        "<td>" + h(item.activity_title) + "</td>" +
-                        '<td style="white-space:normal;min-width:260px">' + h(item.answer_text || "Selesai dibaca") + "</td>" +
+                        "<td>" + h(item.reading_date) + "</td>" +
+                        "<td>" + h(item.payload?.activity_title || item.payload?.reference || "Bacaan harian") + "</td>" +
+                        '<td style="white-space:normal;min-width:260px">' + h(JSON.stringify(item.payload || {})) + "</td>" +
                         "<td>" + statusBadge(item.status) + "</td>" +
                         '<td style="white-space:normal">' + h(item.reviewer_note || "-") + "</td>" +
-                        "<td>" + fmtDateTime(item.submitted_at) + "</td></tr>").join("")
-                        : emptyRow(5, "Belum ada renungan yang dikirim. Buka kegiatan dengan tanda “Bacaan Alkitab” untuk memulai.")) +
+                        "<td>" + num(item.points_awarded) + "</td></tr>").join("")
+                        : emptyRow(6, "Belum ada bacaan yang dikirim. Buka kegiatan dengan tanda “Bacaan Alkitab” untuk memulai.")) +
                     "</tbody></table></div>");
             } catch (error) {
                 paint(seq, head(ROUTES.tasks) + '<div class="card">' + emptyState("Data gagal dimuat", error.message) + "</div>");
@@ -1900,17 +1916,19 @@
                 ["Hadir", summary.present, "ok"], ["Terlambat", summary.late, "warn"],
                 ["Izin", summary.excused, ""], ["Tidak hadir", summary.absent, "bad"]
             ];
-            paint(seq, head(ROUTES.attendance) +
+            paint(seq, head({ ...ROUTES.attendance, actions: '<button class="btn" type="button" data-act="checkin" data-busy-label="Memeriksa lokasi...">' + icon("check", 16) + " Absen sekarang · +10 point</button>" }) +
+                '<div class="note" style="margin-bottom:16px">Cukup tekan tombol absen saat berada di lokasi. Aplikasi akan meminta izin lokasi dan mencocokkan posisi yang diterima dalam radius 500 meter. Tidak perlu mengaktifkan precise location. Satu kali absen per hari.</div>' +
                 '<div class="grid g4">' + cards.map(([label, value]) =>
                     '<div class="card metric"><div class="k">' + label + '</div><div class="v">' + num(value) + "</div></div>").join("") + "</div>" +
-                '<div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Tanggal</th><th>Status</th><th>Kegiatan</th><th>Point</th><th>Catatan</th></tr></thead><tbody>' +
+                '<div class="table-wrap" style="margin-top:16px"><table><thead><tr><th>Tanggal</th><th>Status</th><th>Lokasi cocok</th><th>Jarak</th><th>Point</th></tr></thead><tbody>' +
                 (records.length ? records.map(item => "<tr>" +
                     "<td>" + fmtDate(item.attendance_date) + "</td>" +
                     "<td>" + statusBadge(item.status) + "</td>" +
-                    "<td>" + h(item.activity_title || item.activity_id || "-") + "</td>" +
+                    "<td>" + h(item.matched_location_name || item.activity_title || item.activity_id || item.site_id || "-") + "</td>" +
+                    '<td>' + (item.distance_meters ? Math.round(num(item.distance_meters)) + " m" : "-") + "</td>" +
                     '<td class="nowrap">+' + num(item.points_earned) + "</td>" +
-                    '<td style="white-space:normal">' + h(item.notes || "-") + "</td></tr>").join("")
-                    : emptyRow(5, "Belum ada absensi. Mulai dari halaman Kegiatan.")) +
+                    "</tr>").join("")
+                    : emptyRow(5, "Belum ada absensi. Tekan tombol Absen saat berada di lokasi.")) +
                 "</tbody></table></div>");
         }
 
@@ -2347,33 +2365,37 @@
         async function adminSubmissions() {
             adminLoading();
             try {
-                const items = listOf(await api("/admin/activity-submissions?status=submitted"));
-                adminPanel('<div class="table-wrap"><table><thead><tr><th>Jemaat</th><th>Kegiatan</th><th>Jawaban</th><th>Dikirim</th><th>Tindakan</th></tr></thead><tbody>' +
-                    (items.length ? items.map(item => "<tr><td>" + h(item.user_email) + "</td><td>" + h(item.activity_title) + "</td>" +
-                        '<td style="white-space:normal;min-width:280px">' + h(item.answer_text || "Selesai dibaca") + "</td>" +
+                const items = listOf(await api("/admin/bible-reading-submissions?status=submitted"));
+                adminPanel('<div class="table-wrap"><table><thead><tr><th>Jemaat</th><th>Tanggal</th><th>Payload bacaan</th><th>Dikirim</th><th>Tindakan</th></tr></thead><tbody>' +
+                    (items.length ? items.map(item => "<tr><td>" + h(item.full_name || item.user_email) + '<div class="small muted">' + h(item.user_email) + "</div></td>" +
+                        "<td>" + h(item.reading_date) + "</td>" +
+                        '<td style="white-space:normal;min-width:280px">' + h(JSON.stringify(item.payload || {})) + "</td>" +
                         "<td>" + fmtDateTime(item.submitted_at) + "</td>" +
                         '<td><div class="actions">' +
-                        '<button class="btn sm" type="button" data-act="review-task" data-uuid="' + h(item.uuid) + '" data-ok="1">Setujui</button>' +
-                        '<button class="btn ghost sm" type="button" data-act="review-task" data-uuid="' + h(item.uuid) + '" data-ok="">Tolak</button>' +
+                        '<button class="btn sm" type="button" data-act="review-bible-reading" data-uuid="' + h(item.uuid) + '" data-ok="1">Setujui</button>' +
+                        '<button class="btn ghost sm" type="button" data-act="review-bible-reading" data-uuid="' + h(item.uuid) + '" data-ok="">Tolak</button>' +
                         "</div></td></tr>").join("")
-                        : emptyRow(5, "Tidak ada renungan yang menunggu review.")) + "</tbody></table></div>");
+                        : emptyRow(5, "Tidak ada bacaan yang menunggu review.")) + "</tbody></table></div>");
             } catch (error) { adminPanel('<div class="card">' + emptyState("Data renungan gagal dimuat", error.message) + "</div>"); }
         }
-        ACTIONS["review-task"] = async ({ uuid, ok }) => {
+        ACTIONS["review-bible-reading"] = async ({ uuid, ok }) => {
             const approve = Boolean(ok);
-            const note = await askInput({
-                title: approve ? "Setujui renungan" : "Tolak renungan",
-                label: approve ? "Catatan untuk jemaat" : "Alasan penolakan",
-                value: approve ? "Bacaan dan kesimpulan diterima." : "",
-                required: !approve, multiline: true,
-                confirmText: approve ? "Setujui" : "Tolak"
-            });
-            if (note === null || (!approve && !note)) return;
+            let points = 0;
+            let note = "";
+            if (approve) {
+                const rawPoints = await askInput({ title: "Setujui bacaan", label: "Jumlah poin", value: "10", required: true, confirmText: "Setujui" });
+                if (rawPoints === null) return;
+                points = Number(rawPoints);
+                if (!Number.isSafeInteger(points) || points < 1) return toast("Jumlah poin harus bilangan bulat positif.", "warn");
+            } else {
+                note = await askInput({ title: "Tolak bacaan", label: "Alasan penolakan", required: true, multiline: true, confirmText: "Tolak" });
+                if (!note) return;
+            }
             try {
-                await api("/admin/activity-submissions/" + encodeURIComponent(uuid) + "/" + (approve ? "approve" : "reject"), {
-                    method: "POST", body: JSON.stringify({ note: note || null })
+                await api("/admin/bible-reading-submissions/" + encodeURIComponent(uuid) + "/" + (approve ? "approve" : "reject"), {
+                    method: "POST", body: JSON.stringify(approve ? { points } : { note })
                 });
-                toast(approve ? "Renungan disetujui." : "Renungan ditolak.");
+                toast(approve ? "Bacaan disetujui dan poin diberikan." : "Bacaan ditolak; jemaat dapat mengirim ulang hari ini.");
                 adminSubmissions();
             } catch (error) { toastError(error); }
         };

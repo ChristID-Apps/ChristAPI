@@ -18,11 +18,13 @@ type ScheduleRequest struct {
 }
 
 type OccurrenceRequest struct {
-	StartsAt time.Time  `json:"starts_at"`
-	EndsAt   *time.Time `json:"ends_at"`
-	Location *string    `json:"location"`
-	Status   string     `json:"status"`
-	Notes    *string    `json:"notes"`
+	StartsAt  time.Time  `json:"starts_at"`
+	EndsAt    *time.Time `json:"ends_at"`
+	Location  *string    `json:"location"`
+	Latitude  *float64   `json:"latitude"`
+	Longitude *float64   `json:"longitude"`
+	Status    string     `json:"status"`
+	Notes     *string    `json:"notes"`
 }
 
 type CreateActivityRequest struct {

@@ -31,15 +31,15 @@ docker-shell:
 	docker-compose exec api sh
 
 docker-db-shell:
-	docker-compose exec postgres psql -U ${DB_USER:-christ_user} -d ${DB_NAME:-christ_db}
+	docker-compose exec postgres sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
 docker-migrate-up:
 	docker compose up -d postgres
-	docker compose run --rm migrate -path=/migrations -database "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable" up
+	docker compose --profile manual-migration run --rm migrate
 
 docker-migrate-down:
 	docker compose up -d postgres
-	docker compose run --rm migrate -path=/migrations -database "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable" down 1
+	docker compose --profile manual-migration run --rm -e MIGRATION_ACTION=down -e MIGRATION_STEPS=1 migrate
 
 docker-clean:
 	docker-compose down -v

@@ -63,6 +63,7 @@ type NewsFilter struct {
 	SiteID *int64
 	ID     *int64
 	Search *string
+	Status string
 	Limit  int
 	Offset int
 }

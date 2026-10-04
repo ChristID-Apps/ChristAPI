@@ -30,6 +30,11 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 		args = append(args, *filter.SiteID)
 		idx++
 	}
+	if filter.Status != "" {
+		query += ` AND n.status = $` + itoa(idx)
+		args = append(args, filter.Status)
+		idx++
+	}
 	if filter.Search != nil && *filter.Search != "" {
 		query += ` AND (title ILIKE $` + itoa(idx) + ` OR content ILIKE $` + itoa(idx) + `)`
 		args = append(args, "%"+*filter.Search+"%")
@@ -37,8 +42,13 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 	}
 
 	// pagination
-	if filter.Limit == 0 {
+	if filter.Limit < 1 {
 		filter.Limit = 25
+	} else if filter.Limit > 100 {
+		filter.Limit = 100
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
 	}
 	query += ` ORDER BY n.published_at DESC NULLS LAST, n.created_at DESC LIMIT $` + itoa(idx) + ` OFFSET $` + itoa(idx+1)
 	args = append(args, filter.Limit, filter.Offset)
@@ -102,7 +112,7 @@ func (r *NewsRepository) List(filter NewsFilter) ([]News, error) {
 		}
 		out = append(out, n)
 	}
-	return out, nil
+	return out, rows.Err()
 }
 
 func (r *NewsRepository) FindByID(id int64) (*News, error) {
@@ -249,9 +259,19 @@ func (r *NewsRepository) Update(uuid string, n *NewsUpdateRequest) error {
 		columns = append(columns, "uuid=uuid")
 	}
 	args = append(args, uuid)
-	query := `UPDATE news SET ` + strings.Join(columns, ", ") + `, updated_at=NOW() WHERE uuid = $` + fmt.Sprint(len(args))
-	_, err := r.DB.Exec(query, args...)
-	return err
+	query := `UPDATE news SET ` + strings.Join(columns, ", ") + `, updated_at=NOW() WHERE uuid = $` + fmt.Sprint(len(args)) + ` AND deleted_at IS NULL`
+	result, err := r.DB.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *NewsRepository) UpdateImage(uuid, imageURL string) error {
@@ -276,9 +296,19 @@ func (r *NewsRepository) SoftDelete(uuid string) error {
 	if r == nil || r.DB == nil {
 		return sql.ErrConnDone
 	}
-	query := `UPDATE news SET deleted_at = NOW() WHERE uuid = $1`
-	_, err := r.DB.Exec(query, uuid)
-	return err
+	query := `UPDATE news SET deleted_at = NOW() WHERE uuid = $1 AND deleted_at IS NULL`
+	result, err := r.DB.Exec(query, uuid)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 // small helper to convert int to string without importing strconv multiple times

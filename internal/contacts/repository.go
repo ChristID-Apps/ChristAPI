@@ -82,6 +82,8 @@ func (r *ContactRepository) List(page, limit int) ([]Contact, error) {
 	}
 	if limit < 1 {
 		limit = 10
+	} else if limit > 100 {
+		limit = 100
 	}
 	offset := (page - 1) * limit
 	rows, err := r.DB.Query(`

@@ -70,7 +70,7 @@ Write-Host ""
 # 2. Check if .env.docker exists
 Write-Host "[*] Checking Docker environment variables..." -ForegroundColor Yellow
 if (-not (Test-Path ".env.docker")) {
-    Write-Host "[ERROR] .env.docker not found" -ForegroundColor Red
+    Write-Host "[ERROR] .env.docker not found. Copy .env.docker.example to .env.docker and fill in local values." -ForegroundColor Red
     exit 1
 } else {
     Write-Host "[OK] .env.docker already exists" -ForegroundColor Green
@@ -123,7 +123,7 @@ if ($MigrateOnly) {
 } else {
     Write-Host "[*] Starting services (postgres, api)..." -ForegroundColor Yellow
     Invoke-DockerCompose -Arguments @("down")
-    Invoke-DockerCompose -Arguments @("up", "-d")
+    Invoke-DockerCompose -Arguments @("up", "-d", "postgres", "api")
     Write-Host "[OK] Services started" -ForegroundColor Green
     Write-Host ""
 }
@@ -132,7 +132,7 @@ if ($MigrateOnly) {
 Write-Host "[*] Waiting for PostgreSQL to be healthy..." -ForegroundColor Yellow
 Start-Sleep -Seconds 3  # Give PostgreSQL time to start
 for ($attempt = 1; $attempt -le 15; $attempt++) {
-    $result = & docker exec postgre-chrisapi pg_isready -U christ_user 2>&1
+    $result = & docker exec postgre-chrisapi sh -c 'pg_isready -U "$POSTGRES_USER"' 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[OK] PostgreSQL is healthy" -ForegroundColor Green
         break
@@ -147,7 +147,7 @@ if ($NoMigrate -and -not $MigrateOnly) {
     Write-Host "[*] Skipping migrations (-NoMigrate)" -ForegroundColor Yellow
 } else {
     Write-Host "[*] Running database migrations..." -ForegroundColor Yellow
-    Invoke-DockerCompose -Arguments @("run", "--rm", "migrate", "-path=/migrations", "-database", "postgres://christ_user:christ_password@postgre-chrisapi:5432/christ_db?sslmode=disable", "up")
+    Invoke-DockerCompose -Arguments @("--profile", "manual-migration", "run", "--rm", "migrate")
     Write-Host "[OK] Migrations complete" -ForegroundColor Green
 }
 Write-Host ""
@@ -174,9 +174,7 @@ Write-Host ""
 Write-Host "[*] Database:" -ForegroundColor Cyan
 Write-Host "    Host: localhost" -ForegroundColor White
 Write-Host "    Port: 5433" -ForegroundColor White
-Write-Host "    Database: christ_db" -ForegroundColor White
-Write-Host "    User: christ_user" -ForegroundColor White
-Write-Host "    Password: christ_password" -ForegroundColor White
+Write-Host "    Database/user: configured in .env.docker" -ForegroundColor White
 Write-Host ""
 Write-Host "[*] Useful commands:" -ForegroundColor Cyan
 Write-Host "    docker compose logs -f                 # View logs" -ForegroundColor White
@@ -184,5 +182,5 @@ Write-Host "    docker compose exec golang-christapi sh # Access API container" 
 Write-Host "    docker compose down                    # Stop services" -ForegroundColor White
 Write-Host ""
 Write-Host "[*] DBeaver connection string:" -ForegroundColor Cyan
-Write-Host "    postgres://christ_user:christ_password@localhost:5433/christ_db" -ForegroundColor White
+Write-Host "    Credentials: configured in .env.docker" -ForegroundColor White
 Write-Host ""

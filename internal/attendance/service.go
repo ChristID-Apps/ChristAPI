@@ -3,17 +3,19 @@ package attendance
 import (
 	"errors"
 	"time"
+
+	"christ-api/internal/location"
 )
 
 type Service struct {
 	Repo *Repository
 }
 
-func (s *Service) CheckIn(userID int64, siteID *int64, activityID *int64, notes *string) (*AttendanceRecord, error) {
+func (s *Service) CheckIn(userID int64, position location.Position) (*AttendanceRecord, error) {
 	if s == nil || s.Repo == nil {
 		return nil, errors.New("attendance repository is not initialized")
 	}
-	return s.Repo.CheckIn(userID, siteID, activityID, notes, time.Now())
+	return s.Repo.CheckIn(userID, position, time.Now())
 }
 
 func (s *Service) GetMyHistory(userID int64, startDate, endDate string, limit, offset int) ([]AttendanceRecord, error) {

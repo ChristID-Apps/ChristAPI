@@ -31,6 +31,8 @@ func (h *Handler) CheckIn(c *fiber.Ctx) error {
 		switch {
 		case errors.Is(err, ErrActivityNotEligible):
 			return response.ErrorDetail(c, 422, "Streak check-in validation failed", err)
+		case errors.Is(err, ErrAttendanceRequired):
+			return response.Error(c, 409, "Attendance check-in is required first", nil)
 		case errors.Is(err, ErrInvalidActivity):
 			return response.Error(c, 404, err.Error(), nil)
 		case strings.Contains(err.Error(), "required"):

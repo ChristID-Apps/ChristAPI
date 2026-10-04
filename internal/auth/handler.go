@@ -152,6 +152,13 @@ func maskEmail(email string) string {
 	return local[:1] + "***@" + parts[1]
 }
 
+func googleIdentityFromClaims(claims map[string]interface{}) (string, string, bool) {
+	email, _ := claims["email"].(string)
+	googleID, _ := claims["sub"].(string)
+	emailVerified, _ := claims["email_verified"].(bool)
+	return email, googleID, emailVerified
+}
+
 func (h *Handler) LoginGoogle(c *fiber.Ctx) error {
 	req := new(requests.GoogleLoginRequest)
 	if err := c.BodyParser(req); err != nil {
@@ -168,11 +175,10 @@ func (h *Handler) LoginGoogle(c *fiber.Ctx) error {
 		return response.ErrorDetail(c, 401, "Invalid Google token", err)
 	}
 
-	email, _ := payload.Claims["email"].(string)
-	googleID, _ := payload.Claims["sub"].(string)
+	email, googleID, emailVerified := googleIdentityFromClaims(payload.Claims)
 
-	if email == "" || googleID == "" {
-		return response.ErrorDetail(c, 401, "Invalid Google token claims", errors.New("Google token did not contain email or subject"))
+	if email == "" || googleID == "" || !emailVerified {
+		return response.Error(c, 401, "Invalid Google token claims", nil)
 	}
 
 	log.Printf("Google OAuth verified: %s (sub: %s)", email, googleID)
@@ -214,9 +220,8 @@ func (h *Handler) SubmitGoogleUsername(c *fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, 401, "Invalid Google token", nil)
 	}
-	email, _ := payload.Claims["email"].(string)
-	googleID, _ := payload.Claims["sub"].(string)
-	if email == "" || googleID == "" {
+	email, googleID, emailVerified := googleIdentityFromClaims(payload.Claims)
+	if email == "" || googleID == "" || !emailVerified {
 		return response.Error(c, 401, "Invalid Google token claims", nil)
 	}
 

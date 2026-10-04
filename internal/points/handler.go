@@ -117,6 +117,7 @@ func (h *Handler) Get(c *fiber.Ctx) error {
 }
 
 type MutateRequest struct {
+	UserID      *int64  `json:"user_id"`
 	Amount      int64   `json:"amount"`
 	Reason      string  `json:"reason"`
 	ReferenceID *string `json:"reference_id"`
@@ -126,7 +127,7 @@ func (h *Handler) Earn(c *fiber.Ctx) error {
 	if isAdmin, _ := c.Locals("is_admin").(bool); !isAdmin {
 		return response.Error(c, 403, "Admin authorization required", nil)
 	}
-	userID, ok := currentUserID(c)
+	_, ok := currentUserID(c)
 	if !ok {
 		return response.Error(c, 401, "Unauthorized", nil)
 	}
@@ -135,8 +136,12 @@ func (h *Handler) Earn(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return response.ErrorDetail(c, 422, "Invalid points request body", err)
 	}
+	targetUserID, err := parseEarnTargetUserID(req.UserID)
+	if err != nil {
+		return response.Error(c, 422, err.Error(), nil)
+	}
 
-	entry, err := h.service.Earn(userID, req.Amount, req.Reason, req.ReferenceID)
+	entry, err := h.service.Earn(targetUserID, req.Amount, req.Reason, req.ReferenceID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return response.Error(c, 404, "User not found", nil)
@@ -151,6 +156,13 @@ func (h *Handler) Earn(c *fiber.Ctx) error {
 	}
 
 	return response.Created(c, "Points earned", entry)
+}
+
+func parseEarnTargetUserID(userID *int64) (int64, error) {
+	if userID == nil || *userID < 1 {
+		return 0, errors.New("user_id must be a positive integer")
+	}
+	return *userID, nil
 }
 
 func (h *Handler) Spend(c *fiber.Ctx) error {

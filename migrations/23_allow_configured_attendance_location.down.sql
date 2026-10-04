@@ -1,0 +1,12 @@
+UPDATE public.attendance_records
+SET matched_location_type = NULL,
+    matched_location_id = NULL,
+    matched_location_name = NULL
+WHERE matched_location_type = 'configured';
+
+ALTER TABLE public.attendance_records
+    DROP CONSTRAINT IF EXISTS attendance_matched_location_type_valid;
+
+ALTER TABLE public.attendance_records
+    ADD CONSTRAINT attendance_matched_location_type_valid
+    CHECK (matched_location_type IS NULL OR matched_location_type IN ('site', 'activity'));
